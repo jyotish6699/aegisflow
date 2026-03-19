@@ -16,7 +16,7 @@ INTENT_PATTERNS = {
 
     "guidance": [
         "guide me",
-        "mentor me"
+        "mentor me",
         "need guidance"
     ],
 
@@ -27,9 +27,13 @@ INTENT_PATTERNS = {
     ],
 
     "motivation_request": [
-        'i will motivate you',
-        "let motivate you",
+        "give me motivation",
         "motivate me",
         "i need motivation"
+    ],
+
+    "offer_motivation": [
+        "i will motivate you",
+        "let me motivate you"
     ]
 }
