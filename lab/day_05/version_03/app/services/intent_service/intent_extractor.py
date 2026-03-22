@@ -7,13 +7,14 @@ from .negation_handler import detect_negation
 from .score_give import choose_intent
 
 def intent_extraction(text: str) -> list[str]:
-
+ 
+    # SIGNAL(preprocessing)
     message, tokens = preprocess(text)
 
     # now scores is a global score for all source 
     scores = {}
 
-    # phrase rule
+    # PATTERN(phrase rule)
     phrase_scores = detect_phrase_intents(message)
     #return phrase_scores    
 
@@ -21,7 +22,7 @@ def intent_extraction(text: str) -> list[str]:
         scores[k] = scores.get(k, 0) + v
 
 
-    # role rule
+    # SIGNAL(role rule)
     role_intent = detect_help_role(tokens)
 
     # role based intent is most important than phase intent because two source of truth for one intent
@@ -29,7 +30,7 @@ def intent_extraction(text: str) -> list[str]:
     if role_intent:
         scores[role_intent] = scores.get(role_intent, 0) + ROLE_WEIGHT
 
-    # negation rule
+    # CONTEXT(negation rule)
     NEGATION_PENALTY = 0.5   
 
     if detect_negation(tokens):
