@@ -1,44 +1,37 @@
+from app.storage.redis_store import redis_store
+
 class MemoryService:
 
     def get(self, user_id: str):
-        """
-        Assemble state from Redis (multiple structures):
-
-        - meta → HASH
-        - intent_freq → HASH
-        - recent_intents → LIST
-        - behavior → HASH
-        - prediction → HASH
-
-        Return combined dict (read model only, not stored as JSON)
-        """
-        pass
+        return {
+            "meta": redis_store.get_meta(user_id),
+            "intent_freq": redis_store.get_intent_freq(user_id),
+            "recent_intents": redis_store.get_recent_intents(user_id)
+        }
 
     def init_state(self, user_id: str):
-        """
-        Initialize base Redis structures:
+        if not redis_store.get_meta(user_id):
+            redis_store.set_meta(user_id,{
+                "user_id": user_id,
+                "total_events": 0
+            })
 
-        - create meta hash (user_id, total_events = 0)
-        - other structures empty by default
-
-        Return initial assembled state
-        """
-        pass
+        return self.get(user_id)
 
     def update_intent(self, user_id: str, event: dict):
-        """
-        Update Redis directly:
+        intent = event["intent"]
 
-        - HINCRBY intent_freq
-        - LPUSH recent_intents (+ LTRIM)
-        - update meta.total_events
+        redis_store.increment_intent(user_id, intent)
+        redis_store.push_recent_intent(user_id, intent)
 
-        DO NOT mutate Python dict only
-        → write directly to Redis
+        meta  = redis_store.get_meta(user_id)
+        total = int(meta.get("total_events", 0)) + 1
 
-        Return updated state (via get)
-        """
-        pass
+        redis_store.set_meta(user_id, {
+            "total_events": total
+        })
+
+        return self.get(user_id)
 
     def save(self, user_id: str, state: dict):
         """

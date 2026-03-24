@@ -1,5 +1,5 @@
 from app.services.intent_service.intent_extractor import build_event
-# IMPORT SERIVCES 
+# SERIVCES 
 from app.services.memory_service import memory_service
 from app.services.behavior_service import behavior_service
 from app.services.prediction_service import prediction_service
@@ -30,16 +30,16 @@ class PipelineService:
             }
 
         # 4. UPDATE STATE(intent_level updated inside memory)
-        state = memory_service.update_intent(state, event)
+        state = memory_service.update_intent(user_id, event)
 
         # 5. BEHAVIOR (pattern detection)
-        state, behavior = behavior_service.update(state, event)
+        # state, behavior = behavior_service.update(state, event)
 
         # 6. PREDICTION (next intent etc.)
-        state = prediction_service.update(state)
+        # state = prediction_service.update(state)
 
         # 7. DECISION
-        decision = decision_service.make(state)
+        # decision = decision_service.make(state)
 
         # 8. SAVE STATE (redis)
         memory_service.save(user_id, state)
@@ -52,8 +52,8 @@ class PipelineService:
         return {
             "status": "success",
             "event": event,
-            "behavior": behavior,
-            "decision": decision,
+            "behavior": "behavior",
+            "decision": "decision",
             "state": state
         }
         

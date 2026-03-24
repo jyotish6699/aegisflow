@@ -1,22 +1,26 @@
+import redis
+
 class RedisStore:
+    def __init__(self):
+        self.r = redis.Redis(
+            host="localhost",
+            port=6379,
+            decode_responses=True
+        )
 
     # -------- META (HASH) --------
     def get_meta(self, user_id):
-        """HGETALL user:{id}:meta"""
-        pass
+        return self.r.hgetall(f"user:{user_id}:meta")
 
     def set_meta(self, user_id, data: dict):
-        """HSET user:{id}:meta"""
-        pass
+        self.r.hset(f"user:{user_id}:meta", mapping=data)
 
     # -------- INTENT FREQ (HASH) --------
     def get_intent_freq(self, user_id):
-        """HGETALL user:{id}:intent_freq"""
-        pass
+        return self.r.hgetall(f"user:{user_id}:intent_freq")
 
     def increment_intent(self, user_id, intent):
-        """HINCRBY user:{id}:intent_freq intent 1"""
-        pass
+        self.r.hincrby(f"user:{user_id}:intent_freq", intent, 1)
 
     # -------- RECENT INTENTS (LIST) --------
     def push_recent_intent(self, user_id, intent):
@@ -24,11 +28,12 @@ class RedisStore:
         LPUSH user:{id}:recent_intents
         LTRIM to fixed size (e.g. last 10)
         """
-        pass
+        key = f"user:{user_id}:recent_intents"
+        self.r.lpush(key, intent)
+        self.r.ltrim(key, 0, 9)
 
     def get_recent_intents(self, user_id):
-        """LRANGE user:{id}:recent_intents 0 -1"""
-        pass
+        return self.r.lrange(f"user:{user_id}:recent_intents", 0, -1)
 
     # -------- BEHAVIOR (HASH) --------
     def set_behavior(self, user_id, data: dict):
