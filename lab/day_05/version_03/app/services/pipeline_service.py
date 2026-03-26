@@ -11,7 +11,7 @@ from app.storage.postgres_store import postgres_store
 
 class PipelineService:
 
-    def run(self, user_id: str, text: str):
+    def run(self, user_id: str, text: str, debug: bool):
         
         # 1. LOAD MEMORY (Redis -> current state)
         state = memory_service.get(user_id)
@@ -33,7 +33,10 @@ class PipelineService:
         state = memory_service.update_intent(user_id, event)
 
         # 5. BEHAVIOR (pattern detection)
-        # state, behavior = behavior_service.update(state, event)
+        state, behavior = behavior_service.update(state)
+
+        # STORE behavior in Redis 
+        memory_service.update_behavior(user_id, behavior)
 
         # 6. PREDICTION (next intent etc.)
         # state = prediction_service.update(state)
@@ -46,17 +49,20 @@ class PipelineService:
 
         # 9. SAVE RAW EVENT (postgreSQL)
         postgres_store.save_event(event)
+        
 
-
-
-        return {
+        response = {
             "status": "success",
             "event": event,
-            "behavior": "behavior",
-            "decision": "decision",
-            "state": state
+            "insight": {
+                "behavior": behavior
+            }
         }
         
+        if debug:
+            response["debug"] = state
+
+        return response
     
 # Singleton instance
 pipeline = PipelineService()

@@ -31,7 +31,11 @@ class MemoryService:
             "total_events": total
         })
 
+
         return self.get(user_id)
+    
+    def update_behavior(self, user_id: str, behavior: dict):
+        redis_store.set_behavior(user_id, behavior)
 
     def save(self, user_id: str, state: dict):
         """
