@@ -39,7 +39,7 @@ class PipelineService:
         memory_service.update_behavior(user_id, behavior)
 
         # 6. PREDICTION (next intent etc.)
-        # state = prediction_service.update(state)
+        state, prediction = prediction_service.update(state)
 
         # 7. DECISION
         # decision = decision_service.make(state)
@@ -55,7 +55,8 @@ class PipelineService:
             "status": "success",
             "event": event,
             "insight": {
-                "behavior": behavior
+                "behavior": behavior,
+                "prediction": prediction
             }
         }
         

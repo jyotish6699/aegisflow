@@ -40,7 +40,7 @@ class RedisStore:
     # -------- BEHAVIOR (HASH) --------
     def set_behavior(self, user_id, data: dict):
         key = f"user:{user_id}:behavior"
-        self.r.hset(f"user:{user_id}:behavior", mapping = data)
+        self.r.hset(key, mapping = data)
         self.r.expire(key, 3600)
 
     def get_behavior(self, user_id):
@@ -60,11 +60,23 @@ class RedisStore:
     # -------- PREDICTION (HASH) --------
     def set_prediction(self, user_id, data: dict):
         """HSET user:{id}:prediction"""
-        pass
+        key = f"user:{user_id}:prediction"
+        self.r.hset(key, mapping = data)
+        self.r.expire(key, 3600)
 
     def get_prediction(self, user_id):
         """HGETALL user:{id}:prediction"""
-        pass
+        return self.r.hgetall(f"user:{user_id}:prediction")
+    
+    # ------ RECENT PREDICTION (LIST) --------
+    def push_recent_prediction(self, user_id, prediction):
+        key = f"user:{user_id}:recent_prediction"
+        self.r.lpush(key, prediction)
+        self.r.ltrim(key, 0, 9)
+        self.r.expire(key, 3600)
+
+    def get_recent_prediction(self, user_id):
+        return self.r.lrange(f"user:{user_id}:recent_prediction", 0, -1)
 
 
 redis_store = RedisStore()
