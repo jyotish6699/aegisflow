@@ -6,7 +6,8 @@ class MemoryService:
         return {
             "meta": redis_store.get_meta(user_id),
             "intent_freq": redis_store.get_intent_freq(user_id),
-            "recent_intents": redis_store.get_recent_intents(user_id)
+            "recent_intents": redis_store.get_recent_intents(user_id),
+            "recent_behavior": redis_store.get_recent_behavior(user_id)
         }
 
     def init_state(self, user_id: str):
@@ -36,6 +37,10 @@ class MemoryService:
     
     def update_behavior(self, user_id: str, behavior: dict):
         redis_store.set_behavior(user_id, behavior)
+
+        # store behavior history (mode only)
+        if "mode" in behavior:
+            redis_store.push_recent_behavior(user_id, behavior["mode"])
 
     def save(self, user_id: str, state: dict):
         """

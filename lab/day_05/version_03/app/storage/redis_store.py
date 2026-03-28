@@ -47,6 +47,16 @@ class RedisStore:
         """HGETALL user:{id}:behavior"""
         return self.r.hgetall(f"user:{user_id}:behavior")
 
+    # ---------- RECENT BEHAVIOR (LIST) ---------
+    def push_recent_behavior(self, user_id, behavior_mode):
+        key = f"user:{user_id}:recent_behavior"
+        self.r.lpush(key, behavior_mode)
+        self.r.ltrim(key, 0, 9)
+        self.r.expire(key, 3600)
+
+    def get_recent_behavior(self, user_id):
+        return self.r.lrange(f"user:{user_id}:recent_behavior", 0, -1)
+
     # -------- PREDICTION (HASH) --------
     def set_prediction(self, user_id, data: dict):
         """HSET user:{id}:prediction"""
