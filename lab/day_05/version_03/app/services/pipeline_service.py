@@ -3,7 +3,6 @@ from app.services.intent_service.intent_extractor import build_event
 from app.services.memory_service import memory_service
 from app.services.behavior_service import behavior_service
 from app.services.prediction_service import prediction_service
-from app.services. decision_service import decision_service
 
 # STORAGE
 from app.storage.postgres_store import postgres_store
@@ -40,6 +39,9 @@ class PipelineService:
 
         # 6. PREDICTION (next intent etc.)
         state, prediction = prediction_service.update(state)
+
+        # STORE prediction in Redis
+        memory_service.update_prediction(user_id, prediction)
 
         # 7. DECISION
         # decision = decision_service.make(state)

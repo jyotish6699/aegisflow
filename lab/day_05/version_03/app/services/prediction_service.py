@@ -2,7 +2,7 @@ class PredictionService:
     
     def update(self, state: dict):
 
-        freq = {k: int(v) for k, v in state.get("intent_freq, {}").items()}
+        freq = {k: int(v) for k, v in state.get("intent_freq", {}).items()}
         recent = state.get("recent_intents", []) 
         recent_behavior = state.get("recent_behavior", [])
 

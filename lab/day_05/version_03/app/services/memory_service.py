@@ -8,7 +8,6 @@ class MemoryService:
             "intent_freq": redis_store.get_intent_freq(user_id),
             "recent_intents": redis_store.get_recent_intents(user_id),
             "recent_behavior": redis_store.get_recent_behavior(user_id),
-            "prediction": redis_store.get_prediction(user_id),
             "recent_prediction": redis_store.get_recent_prediction(user_id)
         }
 
@@ -38,33 +37,16 @@ class MemoryService:
         return self.get(user_id)
     
     def update_behavior(self, user_id: str, behavior: dict):
-        redis_store.set_behavior(user_id, behavior)
-
         # store behavior history (mode only)
         if "mode" in behavior:
             redis_store.push_recent_behavior(user_id, behavior["mode"])
 
     def update_prediction(self, user_id: str, prediction: dict):
-        redis_store.set_prediction(user_id, prediction)
-
         if prediction.get("next_intent"):
-            redis_store.push_recent_prediction(
-                user_id,
-                prediction["next_intent"]
-            )
-
+            redis_store.push_recent_prediction(user_id, prediction["next_intent"])
+    
     def save(self, user_id: str, state: dict):
-        """
-        Optional:
-
-        In Redis-native design, most updates already happen step-by-step
-
-        Use only if:
-        - syncing derived fields
-        - or fallback persistence
-
-        Otherwise can be NO-OP
-        """
+        """Save the current state (placeholder - state is saved incrementally via other methods)"""
         pass
 
 
