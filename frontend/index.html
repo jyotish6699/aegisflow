@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisFlow</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Aegisflow</h1>
+        <span id="status">🟢 Active</span>
+    </header>
+
+    <main>
+
+        <section class="card">
+            <h2>Workspace</h2>
+
+            <label>Project</label>
+            <input type="text" id="project">
+
+            <label>Current Task</label>
+            <input type="text" id="task">
+
+            <label>Quick Note</label>
+            <textarea id="note"></textarea>
+
+            <div class="buttons">
+                <button id="start">Start Session</button>
+                <button id="end">End Session</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Quick Actions</h2>
+
+            <div class="buttons">
+                <button>Create Project</button>
+                <button>Create Task</button>
+                <button>Complete Task</button>
+                <button>Add Note</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Live Events</h2>
+
+            <ul id="events">
+                <li>Waiting for events...</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>Status</h2>
+
+            <p>Project : Aegisflow</p>
+            <p>Session : Not Started</p>
+            <p>Total Events : <span id="count">0</span></p>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
