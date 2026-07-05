@@ -18,10 +18,36 @@ function addEvent(message){
     count.textContent = totalEvents;
 }
 
+const EventEngine = {
+
+    emit(type, payload){
+
+        const event = {
+
+            id: crypto.randomUUID(),
+            type: type,
+            timestamp: new Date().toISOString(),
+            payload: payload
+        };
+
+        this.dispatch(event);
+    },
+
+    dispatch(event){
+        addEvent(event.type);
+    }
+};
+
 document.getElementById("start").onclick = () => {
-    addEvent("Session Started");
+    EventEngine.emit(
+        "session.started",
+        {}
+    );
 };
 
 document.getElementById("end").onclick = () => {
-    addEvent("Session Ended");
+    EventEngine.emit(
+        "session.ended",
+        {}
+    );
 };
