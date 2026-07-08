@@ -1,21 +1,20 @@
-## Version : v0.0.2
+Version : v0.0.3
+Title
 
-### Title
+Backend Event Receiver
 
-Frontend Event Engine
-
-### Status
+Status
 
 Completed
 
-### Description
+Description
 
-This milestone introduces the first core architectural component of AegisFlow: the **Frontend Event Engine**.
+The third milestone introduces the first complete communication pipeline between the frontend and the backend.
 
-Instead of allowing frontend components to communicate directly with application logic, every meaningful user interaction is now translated into a standardized event through the Event Engine.
+The Frontend Event Engine now dispatches standardized events to the backend using HTTP POST requests. A FastAPI-based Event Receiver accepts incoming events, processes the request, and returns a structured JSON response to the frontend.
 
-The Event Engine establishes a consistent event lifecycle by creating structured event objects containing a unique identifier, event type, timestamp, and payload. Each event is then dispatched through a centralized dispatch pipeline before reaching the user interface.
+The frontend validates the backend response before updating the Live Event Console, ensuring that only successfully received events are acknowledged in the user interface.
 
-This architecture separates user interactions from event processing and establishes the foundation for the future backend event receiver, event storage, context generation, and continuous understanding pipeline.
+This milestone also establishes Cross-Origin Resource Sharing (CORS) support, enabling secure communication between the frontend and backend during development.
 
-With this milestone, AegisFlow transitions from a simple interactive frontend into the first stage of an event-driven system.
+With this implementation, AegisFlow achieves its first end-to-end event-driven architecture, forming the communication layer upon which persistent event storage, context generation, and continuous understanding will be built.

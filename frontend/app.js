@@ -33,8 +33,39 @@ const EventEngine = {
         this.dispatch(event);
     },
 
-    dispatch(event){
-        addEvent(event.type);
+    async dispatch(event){
+        
+        try {
+
+            // Send the event to the backend and receive response
+            const response = await fetch(
+                "http://localhost:8000/events",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify(event)
+                }
+            );
+
+            // Convert backend response to JavaScript object
+            const result = await response.json();
+
+            // Check whether backend accepted the event
+            if(result.status === "success") {
+
+                addEvent(event.type);
+            }else {
+
+                console.error("Backend rejected event:", result);
+            }
+
+        } catch (error) {
+            console.error("Failed to send event:", error);
+        }
     }
 };
 
