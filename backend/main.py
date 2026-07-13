@@ -1,7 +1,16 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import Base, engine
+from models.event import Event
+from api.events import router
+
 app = FastAPI()
+
+app.include_router(router)
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,14 +23,3 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/events")
-async def receive_event(request: Request):
-
-    event = await request.json()
-
-    print(event)
-
-    return {
-        "status": "success",
-        "message": "Session event stored successfully"
-    }

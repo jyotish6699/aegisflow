@@ -24,7 +24,7 @@ const EventEngine = {
 
         const event = {
 
-            id: crypto.randomUUID(),
+            event_id: crypto.randomUUID(),
             type: type,
             timestamp: new Date().toISOString(),
             payload: payload
