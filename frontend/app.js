@@ -46,6 +46,35 @@ function addEvent(event) {
     totalEvents++;
 }
 
+// =====================================================
+// Workspace Validation
+// =====================================================
+
+function validateWorkspace() {
+
+    // Project is required
+    if(projectInput.value.trim() === "") {
+
+        alert("Please enter a project name.");
+
+        projectInput.focus();
+
+        return false;
+    }
+
+    // Current task is required
+    if(taskInput.value.trim() === "") {
+
+        alert("Please enter the current task.");
+
+        taskInput.focus();
+
+        return false;
+    }
+
+    return true;
+}
+
 
 // =====================================================
 // Workspace UI
@@ -62,6 +91,8 @@ const WorkspaceUI = {
         startButton.style.display = "none";
 
         endButton.style.display = "inline-block";
+
+        setWorkspaceLocked(true);
     },
 
     endSession() {
@@ -73,9 +104,25 @@ const WorkspaceUI = {
         startButton.style.display = "inline-block";
 
         endButton.style.display = "none";
+
+        setWorkspaceLocked(false);
     }
 
 };
+
+// =====================================================
+// Workspace Lock
+// =====================================================
+
+function setWorkspaceLocked(locked) {
+
+    projectInput.disabled = locked;
+
+    taskInput.disabled = locked;
+
+    noteInput.disabled = locked;
+
+}
 
 
 // =====================================================
@@ -156,6 +203,11 @@ const EventEngine = {
 document
     .getElementById("start-session")
     .addEventListener("click", async () => {
+
+        // Validate workspace
+        if (!validateWorkspace()) {
+            return;
+        }
 
         WorkspaceUI.startSession();
 
