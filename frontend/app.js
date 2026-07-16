@@ -1,43 +1,110 @@
+// =====================================================
+// DOM Elements
+// =====================================================
+
 const events = document.getElementById("events");
-const count = document.getElementById("count");
+
+const projectInput = document.getElementById("project");
+const taskInput = document.getElementById("task");
+const noteInput = document.getElementById("note");
+
+const sessionStatus = document.getElementById("status");
+
+const startButton = document.getElementById("start-session");
+const endButton = document.getElementById("end-session");
 
 let totalEvents = 0;
 
-function addEvent(message){
-    
-    if(totalEvents === 0){
+// =====================================================
+// Session State
+// =====================================================
+
+const SessionState = {
+
+    active: false
+
+};
+
+
+// =====================================================
+// Live Event Console
+// =====================================================
+
+function addEvent(event) {
+
+    if (totalEvents === 0) {
         events.innerHTML = "";
     }
 
     const li = document.createElement("li");
-    li.textContent = message;
+
+    li.textContent =
+        `[${new Date(event.timestamp).toLocaleTimeString()}] ${event.type}`;
 
     events.prepend(li);
 
     totalEvents++;
-    count.textContent = totalEvents;
 }
+
+
+// =====================================================
+// Workspace UI
+// =====================================================
+
+const WorkspaceUI = {
+
+    startSession() {
+
+        sessionStatus.active = true;
+
+        sessionStatus.textContent = "🟢 Session Active";
+
+        startButton.style.display = "none";
+
+        endButton.style.display = "inline-block";
+    },
+
+    endSession() {
+
+        sessionStatus.active = false;
+
+        sessionStatus.textContent = "⚪ Session Ended";
+
+        startButton.style.display = "inline-block";
+
+        endButton.style.display = "none";
+    }
+
+};
+
+
+// =====================================================
+// Event Engine
+// =====================================================
 
 const EventEngine = {
 
-    emit(type, payload){
+    emit(type, payload) {
 
         const event = {
 
             event_id: crypto.randomUUID(),
+
             type: type,
+
             timestamp: new Date().toISOString(),
+
             payload: payload
+
         };
 
-        this.dispatch(event);
+        return this.dispatch(event);
     },
 
-    async dispatch(event){
-        
+    async dispatch(event) {
+
         try {
 
-            // Send the event to the backend and receive response
             const response = await fetch(
                 "http://localhost:8000/events",
                 {
@@ -51,34 +118,70 @@ const EventEngine = {
                 }
             );
 
-            // Convert backend response to JavaScript object
             const result = await response.json();
 
-            // Check whether backend accepted the event
-            if(result.status === "success") {
+            if (result.status === "success") {
 
-                addEvent(event.type);
-            }else {
+                addEvent(event);
 
-                console.error("Backend rejected event:", result);
+                console.log("Event Stored Successfully");
+
+                console.log(result);
+
+            } else {
+
+                console.error("Backend rejected event");
+
+                console.error(result);
+
             }
 
         } catch (error) {
-            console.error("Failed to send event:", error);
+
+            console.error("Failed to send event");
+
+            console.error(error);
+
         }
+
     }
+
 };
 
-document.getElementById("start").onclick = () => {
-    EventEngine.emit(
-        "session.started",
-        {}
-    );
-};
 
-document.getElementById("end").onclick = () => {
-    EventEngine.emit(
-        "session.ended",
-        {}
-    );
-};
+// =====================================================
+// Button Events
+// =====================================================
+
+document
+    .getElementById("start-session")
+    .addEventListener("click", async () => {
+
+        WorkspaceUI.startSession();
+
+        await EventEngine.emit(
+            "session.started",
+            {
+                project: projectInput.value,
+                task: taskInput.value,
+                note: noteInput.value
+            }
+        );
+
+    });
+
+
+document
+    .getElementById("end-session")
+    .addEventListener("click", async () => {
+
+        WorkspaceUI.endSession();
+
+        await EventEngine.emit(
+            "session.ended",
+            {
+                project: projectInput.value
+            }
+        );
+
+    });

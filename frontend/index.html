@@ -1,66 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
     <title>AegisFlow</title>
-    <link rel="stylesheet" href="style.css">
+
+    <link rel="stylesheet"
+          href="style.css">
+
 </head>
+
 <body>
 
+    <!-- ===================================================== -->
+    <!-- Header -->
+    <!-- ===================================================== -->
+
     <header>
-        <h1>Aegisflow</h1>
-        <span id="status">🟢 Active</span>
+
+        <div class="header-left">
+
+            <h1>AegisFlow</h1>
+
+            <p class="subtitle">
+                Developer Workspace
+            </p>
+
+        </div>
+
+        <div class="header-right">
+
+            <span id="status">
+
+                🟢 Workspace Ready
+
+            </span>
+
+            <span class="version">
+
+                v0.0.5
+
+            </span>
+
+        </div>
+
     </header>
 
-    <main>
 
-        <section class="card">
-            <h2>Workspace</h2>
+    <!-- ===================================================== -->
+    <!-- Main Workspace -->
+    <!-- ===================================================== -->
 
-            <label>Project</label>
-            <input type="text" id="project">
+    <main class="workspace-layout">
 
-            <label>Current Task</label>
-            <input type="text" id="task">
 
-            <label>Quick Note</label>
-            <textarea id="note"></textarea>
+        <!-- ============================================== -->
+        <!-- Current Workspace -->
+        <!-- ============================================== -->
+
+        <section
+            class="panel"
+            id="current-workspace">
+
+            <h2>
+
+                Current Workspace
+
+            </h2>
+
+            <div class="field">
+
+                <label>
+
+                    Project
+
+                </label>
+
+                <input
+                    id="project"
+                    type="text"
+                    placeholder="AegisFlow">
+
+            </div>
+
+            <div class="field">
+
+                <label>
+
+                    Current Task
+
+                </label>
+
+                <input
+                    id="task"
+                    type="text"
+                    placeholder="What are you working on?">
+
+            </div>
+
+            <div class="field">
+
+                <label>
+
+                    Session Notes
+
+                </label>
+
+                <textarea
+                    id="note"
+                    placeholder="Today's progress...">
+                </textarea>
+
+            </div>
 
             <div class="buttons">
-                <button id="start">Start Session</button>
-                <button id="end">End Session</button>
+
+                <button id="start-session">
+
+                    Start
+
+                </button>
+
+                <button id="end-session" style="display:none;">
+
+                    End
+
+                </button>
+
             </div>
+
         </section>
 
-        <section class="card">
-            <h2>Quick Actions</h2>
 
-            <div class="buttons">
-                <button>Create Project</button>
-                <button>Create Task</button>
-                <button>Complete Task</button>
-                <button>Add Note</button>
+        <!-- ============================================== -->
+        <!-- Previous Session -->
+        <!-- Hidden when there is no history -->
+        <!-- ============================================== -->
+
+        <section
+            class="panel"
+            id="previous-session"
+            style="display:none;">
+            
+
+            <h2>
+
+                Previous Session
+
+            </h2>
+
+            <div class="summary-item">
+
+                <span>
+
+                    Last Project
+
+                </span>
+
+                <strong id="previous-project">
+
+                    AegisFlow
+
+                </strong>
+
             </div>
+
+            <div class="summary-item">
+
+                <span>
+
+                    Last Task
+
+                </span>
+
+                <strong id="previous-task">
+
+                    Event Persistence
+
+                </strong>
+
+            </div>
+
+            <div class="summary-item">
+
+                <span>
+
+                    Summary
+
+                </span>
+
+                <p id="summary">
+
+                    ✔ Event Persistence completed successfully.
+
+                </p>
+
+            </div>
+
+            <div class="summary-item">
+
+                <span>
+
+                    Next Step
+
+                </span>
+
+                <strong id="next-step">
+
+                    Workspace State
+
+                </strong>
+
+            </div>
+
         </section>
 
-        <section class="card">
-            <h2>Live Events</h2>
+
+        <!-- ============================================== -->
+        <!-- Live Events -->
+        <!-- ============================================== -->
+
+        <section
+            class="panel"
+            id="live-events">
+
+            <h2>
+
+                Live Events
+
+            </h2>
 
             <ul id="events">
-                <li>Waiting for events...</li>
+
+                <li>
+
+                    Workspace ready.
+                    Waiting for events...
+
+                </li>
+
             </ul>
+
         </section>
 
-        <section class="card">
-            <h2>Status</h2>
 
-            <p>Project : Aegisflow</p>
-            <p>Session : Not Started</p>
-            <p>Total Events : <span id="count">0</span></p>
-        </section>
     </main>
 
     <script src="app.js"></script>
+
 </body>
+
 </html>
