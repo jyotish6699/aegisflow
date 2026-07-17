@@ -4,6 +4,32 @@ All notable changes to AegisFlow are documented in this file.
 
 ---
 
+# Changelog
+
+## [v0.0.5] - 2026-07-18
+
+### Added
+
+- Frontend workspace session lifecycle
+- Session state management
+- Workspace validation
+- Workspace locking
+- Session wrap-up workflow
+- Previous session rendering
+- Workspace reset
+- Live event console improvements
+
+### Changed
+
+- Refactored workspace flow into SessionState, WorkspaceUI and WrapupUI
+- Replaced direct session ending with a dedicated wrap-up workflow
+- Improved frontend architecture in preparation for backend persistence
+
+### Fixed
+
+- Workspace state restoration after session completion
+- Previous session rendering workflow
+
 ## [v0.0.4] - Event Persistence
 
 ### Added
