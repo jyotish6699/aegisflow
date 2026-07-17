@@ -65,7 +65,7 @@
 
         <section
             class="panel"
-            id="current-workspace">
+            id="workspace-panel">
 
             <h2>
 
@@ -133,6 +133,43 @@
                 </button>
 
             </div>
+
+        </section>
+
+        <!-- ============================================== -->
+        <!-- Session Wrap-up -->
+        <!-- ============================================== -->
+
+
+        <section
+            class="panel"
+            id="session-wrapup"
+            style="display: none;">
+
+            <h2>Session Wrap-up</h2>
+
+            <div class="field-group">
+                <label for="summary-input">Summary</label>
+
+                <textarea
+                    id="summary-input"
+                    rows="4"
+                    placeholder="What did you accomplish in this session?">
+                </textarea>
+            </div>
+
+            <div class="field-group">
+                <label for="next-step-input">Next Step</label>
+
+                <input
+                    id="next-step-input"
+                    type="text"
+                    placeholder="What should you work on next?">
+            </div>
+
+            <button id="save-session-btn">
+                Save Session
+            </button>
 
         </section>
 
