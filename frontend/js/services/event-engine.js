@@ -1,4 +1,5 @@
 import { addEvent } from "../ui/events.js";
+import { SessionState } from "../state/session.js";
 
 // =====================================================
 // Event Engine
@@ -6,15 +7,15 @@ import { addEvent } from "../ui/events.js";
 
 export const EventEngine = {
 
-    async emit(type, payload) {
+    async emit(event_type, payload) {
 
         const event = {
 
-            event_id: crypto.randomUUID(),
+            session_id: SessionState.currentSession.id,
 
-            type,
+            event_type,
 
-            timestamp: new Date().toISOString(),
+            occurred_at: new Date().toISOString(),
 
             payload
 
@@ -41,23 +42,17 @@ export const EventEngine = {
                 }
             );
 
-            const result = await response.json();
-
-            if (result.status === "success") {
-
-                addEvent(event);
-
-                console.log("Event Stored Successfully");
-
-                console.log(result);
-
-            } else {
-
-                console.error("Backend rejected event");
-
-                console.error(result);
-
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
+
+            const savedEvent = await response.json();
+
+            addEvent(savedEvent);
+
+            console.log("Event stored successfully");
+
+            console.log(savedEvent);
 
         } catch (error) {
 

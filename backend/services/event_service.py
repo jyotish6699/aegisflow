@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 # Event database model
 from models.event import Event
 
-# ---------------------------------
+
+# -------------------------------------------------
 # Save Event
-# ---------------------------------
+# -------------------------------------------------
 # Receives event data from the API,
 # creates an Event model,
 # stores it in PostgreSQL,
@@ -14,35 +15,22 @@ from models.event import Event
 
 def save_event(db: Session, event_data: dict):
 
-    # Create Event Model
-
-    print(event_data)
-
+    # Create Event model
     event = Event(
-        event_id=event_data["event_id"],
-        type=event_data["type"],
-        timestamp=event_data["timestamp"],
-        payload=event_data["payload"]
+        session_id=event_data["session_id"],
+        event_type=event_data["event_type"],
+        occurred_at=event_data["occurred_at"],
+        payload=event_data["payload"],
     )
 
-    # Add object to currect database session
-
+    # Add object to current database session
     db.add(event)
 
-    print("Added")
-
     # Save changes permanently
-
     db.commit()
 
-    print("Committed")
-
     # Reload object from database
-    
     db.refresh(event)
 
-    print("Refreshed")
-
     # Return saved event
-
     return event

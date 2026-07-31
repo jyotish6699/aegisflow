@@ -14,6 +14,9 @@ from sqlalchemy.dialects.postgresql import UUID
 # SQLAlchemy ORM mapping
 from sqlalchemy.orm import Mapped, mapped_column
 
+# Relationship with event object
+from sqlalchemy.orm import relationship
+
 # Base model
 from database import Base
 
@@ -89,4 +92,10 @@ class Session(Base):
         nullable=False,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
+    )
+
+    events = relationship(
+        "Event",
+        back_populates="session",
+        cascade="all, delete-orphan",
     )

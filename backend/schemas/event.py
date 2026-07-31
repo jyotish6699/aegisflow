@@ -7,17 +7,46 @@ from uuid import UUID
 # Python datetime
 from datetime import datetime
 
-# ------------------------
-# Event Request Schema
-# ------------------------
-# Defines the structure of an incoming event request from the frontend
+
+# -------------------------------------------------
+# Event Create Schema
+# -------------------------------------------------
+# Request body received from the frontend.
 
 class EventCreate(BaseModel):
 
-    event_id: UUID
+    # Session to which this event belongs
+    session_id: UUID
 
-    type: str
+    # Type of event
+    event_type: str
 
-    timestamp: datetime
+    # Time when the event occurred
+    occurred_at: datetime
+
+    # Event-specific data
+    payload: dict
+
+
+# -------------------------------------------------
+# Event Response Schema
+# -------------------------------------------------
+# Response returned by the backend after storing an event.
+
+class EventResponse(BaseModel):
+
+    id: UUID
+
+    session_id: UUID
+
+    event_type: str
+
+    occurred_at: datetime
 
     payload: dict
+
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
