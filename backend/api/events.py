@@ -6,9 +6,12 @@ from services.event_service import save_event
 
 from schemas.event import EventCreate
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/events",
+    tags=["Events"],
+)
 
-@router.post("/events")
+@router.post("")
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
     
     saved_event = save_event(db, event.model_dump())

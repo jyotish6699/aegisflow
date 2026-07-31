@@ -13,21 +13,35 @@ import { EventEngine } from "./services/event-engine.js";
 
 import { resetWorkspace } from "./utils/workspace-reset.js";
 
+import { SessionService } from "./services/session-service.js";
+
 // =====================================================
 // Session Service
 // =====================================================
 
-function createSession() {
+async function createSession() {
+
+    const session = await SessionService.create({
+
+        project_name: DOM.projectInput.value.trim(),
+
+        task_name: DOM.taskInput.value.trim(),
+
+        notes: DOM.noteInput.value.trim()
+
+    });
 
     SessionState.currentSession = {
 
-        project: DOM.projectInput.value.trim(),
+        id: session.id,
 
-        task: DOM.taskInput.value.trim(),
+        project: session.project_name,
 
-        notes: DOM.noteInput.value.trim(),
+        task: session.task_name,
 
-        startedAt: new Date(),
+        notes: session.notes,
+
+        startedAt: session.started_at,
 
         endedAt: null,
 
@@ -87,7 +101,7 @@ DOM.startButton.addEventListener(
 
         }
 
-        createSession();
+        await createSession();
 
         WorkspaceUI.startSession();
 

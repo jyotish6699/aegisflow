@@ -3,11 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
 from models.event import Event
-from api.events import router
+from models.session import Session
+from api.events import router as events_router
+from api.sessions import router as sessions_router
 
 app = FastAPI()
 
-app.include_router(router)
+app.include_router(events_router)
+app.include_router(sessions_router)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
