@@ -15,7 +15,7 @@ export function addEvent(event) {
     const li = document.createElement("li");
 
     li.textContent =
-        `[${new Date(event.timestamp).toLocaleTimeString()}] ${event.type}`;
+        `[${new Date(event.occurred_at).toLocaleTimeString()}] ${event.event_type}`;
 
     DOM.events.prepend(li);
 
