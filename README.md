@@ -291,18 +291,95 @@ aegisflow/
 
 ---
 
-# Development Progress
+# Architecture Roadmap
 
-| Version | Status | Milestone |
-|----------|--------|-----------|
-| v0.0.1 | ✅ | Frontend Foundation |
-| v0.0.2 | ✅ | Event Engine |
-| v0.0.3 | ✅ | Backend Event Receiver |
-| v0.0.4 | ✅ | Event Persistence |
-| v0.0.5 | ✅ | Frontend Workspace State |
-| v0.0.6 | ✅ | Event Foundation |
+AegisFlow is being developed layer by layer. Each milestone introduces one architectural capability that becomes the foundation for the next.
 
 ---
+
+v0.0.6
+Event Foundation
+✔ Completed
+
+        │
+        ▼
+
+v0.0.7
+Timeline Foundation
+(Read Model)
+
+        │
+        ▼
+
+v0.0.8
+Observation Foundation
+(Automatic Event Producers)
+
+        │
+        ▼
+
+v0.0.9
+Interpretation Engine
+(Derive Meaning)
+
+        │
+        ▼
+
+v0.1.0
+Context Engine
+(Continuous Understanding)
+```
+
+### Milestone Overview
+
+| Version | Layer | Purpose | Status |
+|----------|-------|---------|--------|
+| **v0.0.6** | Event Foundation | Persist structured events and sessions | ✅ Completed |
+| **v0.0.7** | Timeline Foundation | Reconstruct developer work from events | 🚧 Planned |
+| **v0.0.8** | Observation Foundation | Automatically generate events from developer activity | 📋 Planned |
+| **v0.0.9** | Interpretation Engine | Transform observations into meaningful insights | 📋 Planned |
+| **v0.1.0** | Context Engine | Build continuous understanding from accumulated knowledge | 📋 Planned |
+
+Each version builds directly upon the previous one. Higher layers never bypass lower layers, ensuring that AegisFlow evolves through a stable, incremental architecture rather than isolated features.
+
+---
+
+# Long-Term Architecture
+
+The long-term architecture of AegisFlow evolves through progressively higher levels of understanding.
+
+```
+Developer
+        │
+        ▼
+Observation Layer
+        │
+        ▼
+Event Layer
+        │
+        ▼
+Timeline
+        │
+        ▼
+Interpretation Engine
+        │
+        ▼
+Context Engine
+        │
+        ▼
+Continuous Understanding
+```
+
+Each layer has a single responsibility:
+
+| Layer | Responsibility |
+|--------|----------------|
+| Observation Foundation | Collect objective developer activity without manual input |
+| Event Layer | Convert observations into structured business events |
+| Timeline | Reconstruct chronological developer activity |
+| Interpretation Engine | Derive higher-level meaning from timelines |
+| Context Engine | Build long-term project and developer context |
+| Continuous Understanding | Continuously adapt to evolving work and support future decisions |
 
 # Current Status
 
