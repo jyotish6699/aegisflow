@@ -1,66 +1,93 @@
-# PostgreSQL column data types
-from sqlalchemy import String, DateTime
+# UUID generation
+import uuid
 
-# PostgreSQL JSON data type 
-from sqlalchemy.dialects.postgresql import JSONB
+# Date and time
+from datetime import datetime
 
-# UUID support 
-from sqlalchemy.dialects.postgresql import UUID
+# SQLAlchemy column types
+from sqlalchemy import String, DateTime, ForeignKey
 
-# Maps Python attributes to database columns
-from sqlalchemy.orm import Mapped, mapped_column
+# PostgreSQL column types
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
-# Base class for every database model 
+# SQLAlchemy ORM
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+# Base model
 from database import Base
+
 
 # -------------------------------------------------
 # Event Model
 # -------------------------------------------------
-# This class represents the "events" table inside postgreSQL.
-
-# Every attributes below becomes one column inside the table.
 
 class Event(Base):
 
-    # Name of the table inside PostgreSQL
     __tablename__ = "events"
 
-    # ---------------------------
+    # -------------------------------------------------
     # Primary Key
-    # ---------------------------
-    # Every event has a globally unique identifier.
+    # -------------------------------------------------
 
-    event_id: Mapped[UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        primary_key=True
+        primary_key=True,
+        default=uuid.uuid4,
     )
 
-    # ----------------------------
+    # -------------------------------------------------
+    # Parent Session
+    # -------------------------------------------------
+
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sessions.id"),
+        nullable=False,
+    )
+
+    # -------------------------------------------------
     # Event Type
-    # ----------------------------
-    
-    type: Mapped[str] = mapped_column(
+    # -------------------------------------------------
+
+    event_type: Mapped[str] = mapped_column(
         String,
-        nullable=False
+        nullable=False,
     )
 
-    # --------------------------
-    # Event timestamp
-    # --------------------------
-    # Time when the event occurred.
+    # -------------------------------------------------
+    # Business Timestamp
+    # -------------------------------------------------
 
-    timestamp: Mapped[DateTime] = mapped_column(
+    occurred_at: Mapped[datetime] = mapped_column(
         DateTime,
-        nullable=False
+        nullable=False,
+        default=datetime.utcnow,
     )
 
-    # --------------------------
-    # Event Payload
-    # --------------------------
-    # Stores event-specific information
-    # Ex.: "project": "Aegisflow"
+    # -------------------------------------------------
+    # Event Data
+    # -------------------------------------------------
 
     payload: Mapped[dict] = mapped_column(
         JSONB,
-        nullable=False
+        nullable=False,
+    )
+
+    # -------------------------------------------------
+    # Audit Timestamp
+    # -------------------------------------------------
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    # -------------------------------------------------
+    # Relationship
+    # -------------------------------------------------
+
+    session = relationship(
+        "Session",
+        back_populates="events",
     )

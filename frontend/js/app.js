@@ -13,21 +13,37 @@ import { EventEngine } from "./services/event-engine.js";
 
 import { resetWorkspace } from "./utils/workspace-reset.js";
 
+import { SessionService } from "./services/session-service.js";
+
+import { EventTypes } from "./constants/event-types.js";
+
 // =====================================================
 // Session Service
 // =====================================================
 
-function createSession() {
+async function createSession() {
+
+    const session = await SessionService.create({
+
+        project_name: DOM.projectInput.value.trim(),
+
+        task_name: DOM.taskInput.value.trim(),
+
+        notes: DOM.noteInput.value.trim()
+
+    });
 
     SessionState.currentSession = {
 
-        project: DOM.projectInput.value.trim(),
+        id: session.id,
 
-        task: DOM.taskInput.value.trim(),
+        project: session.project_name,
 
-        notes: DOM.noteInput.value.trim(),
+        task: session.task_name,
 
-        startedAt: new Date(),
+        notes: session.notes,
+
+        startedAt: session.started_at,
 
         endedAt: null,
 
@@ -43,7 +59,7 @@ function createSession() {
 // Save Session
 // =====================================================
 
-function saveSession() {
+async function saveSession() {
 
     if (!validateWrapup()) {
 
@@ -56,6 +72,25 @@ function saveSession() {
 
     SessionState.currentSession.nextStep =
         DOM.nextStepInput.value.trim();
+
+    await EventEngine.emit(
+        EventTypes.SESSION_SUMMARY_UPDATED,
+        {
+            summary: SessionState.currentSession.summary
+        }
+    );
+
+    await EventEngine.emit(
+        EventTypes.SESSION_NEXT_STEP_UPDATED,
+        {
+            next_step: SessionState.currentSession.nextStep
+        }
+    );
+
+    await EventEngine.emit(
+        EventTypes.SESSION_COMPLETED,
+        {}
+    );
 
     SessionState.currentSession.endedAt =
         new Date();
@@ -87,22 +122,34 @@ DOM.startButton.addEventListener(
 
         }
 
-        createSession();
+        await createSession();
 
         WorkspaceUI.startSession();
 
         await EventEngine.emit(
-            "session.started",
+            EventTypes.SESSION_STARTED,
+            {}
+        );
+
+        await EventEngine.emit(
+            EventTypes.WORKSPACE_PROJECT_UPDATED,
             {
-
-                project: DOM.projectInput.value,
-
-                task: DOM.taskInput.value,
-
-                note: DOM.noteInput.value
-
+                project_name: SessionState.currentSession.project
             }
+        );
 
+        await EventEngine.emit(
+            EventTypes.WORKSPACE_TASK_UPDATED,
+            {
+                task_name: SessionState.currentSession.task
+            }
+        );
+
+        await EventEngine.emit(
+            EventTypes.WORKSPACE_NOTE_UPDATED,
+            {
+                notes: SessionState.currentSession.notes
+            }
         );
 
     }
@@ -113,16 +160,6 @@ DOM.endButton.addEventListener(
     async () => {
 
         WrapupUI.show();
-
-        await EventEngine.emit(
-            "session.ended",
-            {
-
-                project: DOM.projectInput.value
-
-            }
-
-        );
 
     }
 );

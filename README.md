@@ -2,27 +2,27 @@
 
 > **Continuous Understanding for Developer Workspaces**
 
-AegisFlow is an event-driven developer intelligence workspace designed to continuously understand how development work evolves over time.
+AegisFlow is an event-driven developer workspace that continuously understands how software development evolves over time.
 
-Unlike traditional productivity tools that simply store information, AegisFlow observes meaningful activities inside a workspace, transforms them into structured events, and builds an evolving understanding of projects, progress, sessions, and developer workflows.
+Instead of simply storing notes, tasks, or sessions, AegisFlow captures meaningful workspace activities as structured events. These events become the foundation for reconstructing developer context, understanding project evolution, and enabling future intelligent assistance.
 
-The first version focuses on creating a unified workspace where every meaningful activity becomes an event, forming the foundation for future context understanding and intelligent decision support.
+The current implementation establishes the complete event-driven foundation that future Timeline, Context Engine, and Continuous Understanding components will build upon.
 
 ---
 
 # Vision
 
-Software developers spend a significant amount of time reconstructing context:
+Developers spend a significant amount of time reconstructing context:
 
-* What was I working on?
-* Where did I stop?
-* Which task is most important now?
-* What have I forgotten?
-* How has this project evolved?
+- What was I working on?
+- Where did I stop?
+- Which task should I continue?
+- What changed during my last session?
+- How has this project evolved?
 
-Existing tools store data but require developers to manually reconstruct their workflow.
+Traditional productivity tools store information.
 
-AegisFlow aims to reduce that cognitive burden by continuously understanding the developer's work rather than simply recording isolated activities.
+AegisFlow continuously builds an understanding of developer work by observing meaningful workspace activities and organizing them into a structured event history.
 
 ---
 
@@ -30,27 +30,27 @@ AegisFlow aims to reduce that cognitive burden by continuously understanding the
 
 > **Continuous Understanding**
 
-Every component inside AegisFlow exists to improve the system's understanding of work.
+Every component inside AegisFlow exists to improve the system's understanding of developer work.
 
-The goal is not to collect more events.
+The objective is not to collect more events.
 
-The goal is to continuously understand what those events mean.
+The objective is to continuously understand what those events represent.
 
 ---
 
-# MVP Goal (v0.1)
+# Current Capabilities
 
-Build the first complete working version of AegisFlow that includes:
+The current implementation includes:
 
-* Modern web interface
-* Backend API
-* Database
-* Automatic event generation
-* Activity timeline
-* Developer workspace
-* Insight dashboard
-
-This version is intended for personal use and validation.
+- Developer Workspace
+- Session Management
+- Rich Event Lifecycle
+- FastAPI Backend
+- PostgreSQL Persistence
+- SQLAlchemy ORM
+- Alembic Database Migrations
+- Backend Event Validation
+- Live Event Console
 
 ---
 
@@ -58,10 +58,11 @@ This version is intended for personal use and validation.
 
 AegisFlow is:
 
-* An event-driven developer workspace
-* A continuous understanding platform
-* A unified environment for developer activities
-* A foundation for future workflow intelligence
+- An event-driven developer workspace
+- A backend-first architecture
+- A structured event collection platform
+- A foundation for future developer intelligence
+- A continuous understanding system
 
 ---
 
@@ -69,123 +70,182 @@ AegisFlow is:
 
 AegisFlow is **not**:
 
-* A task manager
-* A project management tool
-* A note-taking application
-* A Git replacement
-* A code editor
-* An AI coding assistant
-* A chatbot
+- A task manager
+- A project management application
+- A note-taking tool
+- A Git replacement
+- A code editor
+- An AI coding assistant
+- A chatbot
 
-Projects, tasks, notes, and sessions exist only because they generate meaningful observations for AegisFlow.
-
-They are not the final product.
+Projects, tasks, notes, and sessions exist only because they generate meaningful events that improve workspace understanding.
 
 ---
 
 # Product Philosophy
 
-Every meaningful action performed inside the workspace becomes an event.
+Every meaningful workspace action becomes an event.
 
 Events become observations.
 
 Observations build context.
 
-Context contributes to continuous understanding.
+Context enables continuous understanding.
 
-Continuous understanding enables future intelligence.
-
----
-
-# MVP Features
-
-## Workspace
-
-* Projects
-* Tasks
-* Notes
-* Work Sessions
+Continuous understanding becomes the foundation for future intelligence.
 
 ---
 
-## Event System
+# Rich Event Lifecycle
 
-Automatically records meaningful activities such as:
+Every completed workspace session generates a structured sequence of business events.
 
-* Project created
-* Task created
-* Task completed
-* Session started
-* Session ended
-* Note added
-* Milestone completed
+```
+session.started
+        │
+        ▼
+workspace.project.updated
+        │
+        ▼
+workspace.task.updated
+        │
+        ▼
+workspace.note.updated
+        │
+        ▼
+session.summary.updated
+        │
+        ▼
+session.next_step.updated
+        │
+        ▼
+session.completed
+```
+
+Each event is:
+
+- Associated with a session
+- Persisted in PostgreSQL
+- Validated by the backend
+- Chronologically ordered
+- Ready for future Timeline generation
 
 ---
 
-## Activity Timeline
+# Current Architecture
 
-Displays the complete chronological history of meaningful events.
-
----
-
-## Dashboard
-
-Displays:
-
-* Current Project
-* Current Session
-* Today's Activity
-* Timeline
-* Statistics
-* Progress Overview
-
----
-
-# Architecture Philosophy
-
-```text
-Frontend
-      │
-      ▼
-REST API
-      │
-      ▼
-Backend Services
-      │
-      ▼
-Event Engine
-      │
-      ▼
+```
+Frontend Workspace
+        │
+        ▼
+Session API
+        │
+        ▼
+Event API
+        │
+        ▼
+Validation Layer
+        │
+        ▼
+Service Layer
+        │
+        ▼
 PostgreSQL
 ```
 
-Every frontend interaction generates a meaningful event.
+---
+
+# Backend Architecture
+
+```
+backend/
+
+├── api/
+├── constants/
+├── models/
+├── schemas/
+├── services/
+├── validators/
+├── alembic/
+├── database.py
+└── main.py
+```
 
 ---
 
-# Long-Term Intelligence Pipeline
+# Frontend Architecture
 
-```text
-Events
-      ↓
-Observation
-      ↓
-Context
-      ↓
-Continuous Understanding
-      ↓
-Memory
-      ↓
-Behavior Learning
-      ↓
-Decision Support
-      ↓
-Automation (Future)
+```
+frontend/
+
+├── css/
+├── js/
+│   ├── constants/
+│   ├── services/
+│   ├── state/
+│   ├── ui/
+│   ├── validation/
+│   └── utils/
+├── assets/
+└── index.html
 ```
 
-Only the Event layer is implemented in the MVP.
+---
 
-The remaining layers will evolve incrementally.
+# Database Architecture
+
+Current database schema:
+
+```
+Sessions
+────────
+
+id
+project_name
+task_name
+notes
+status
+started_at
+ended_at
+created_at
+updated_at
+
+
+Events
+──────
+
+id
+session_id
+event_type
+occurred_at
+payload
+created_at
+```
+
+Relationship:
+
+```
+Sessions (1)
+      │
+      │
+      ▼
+Events (N)
+```
+
+Every event belongs to exactly one session.
+
+---
+
+# Event Validation
+
+Before an event is persisted, the backend validates:
+
+- Event type
+- Payload contract
+- Session reference
+- Request schema
+
+Only valid events are stored.
 
 ---
 
@@ -193,91 +253,84 @@ The remaining layers will evolve incrementally.
 
 ## Frontend
 
-* html
-* css
-* js
+- HTML
+- CSS
+- JavaScript (ES Modules)
 
 ## Backend
 
-* FastAPI
-* Python
+- Python
+- FastAPI
 
 ## Database
 
-* PostgreSQL
+- PostgreSQL
 
 ## ORM
 
-* SQLAlchemy
+- SQLAlchemy 2.x
 
-## Migrations
+## Database Migrations
 
-* Alembic
+- Alembic
 
 ---
 
 # Repository Structure
 
-```text
+```
 aegisflow/
 
 ├── frontend/
 ├── backend/
 ├── docs/
-├── scripts/
 ├── docker/
+├── scripts/
 └── README.md
 ```
 
 ---
 
-# Development Roadmap
+# Development Progress
 
-## v0.1 — Living Workspace
-
-* Frontend
-* Backend
-* Database
-* Workspace
-* Event generation
-* Timeline
-* Dashboard
-
-## v0.2
-
-* Event processing
-* Session analytics
-* Better statistics
-
-## v0.3
-
-* Context Engine
-
-## v0.4
-
-* Behavior Learning
-
-## v0.5
-
-* Decision Support
-
----
-
-# Guiding Principles
-
-* Build one working feature at a time.
-* Every feature should generate meaningful events.
-* Intelligence grows from understanding, not from storing more data.
-* Backend evolves to support the product experience.
-* Build for real daily usage before building advanced intelligence.
+| Version | Status | Milestone |
+|----------|--------|-----------|
+| v0.0.1 | ✅ | Frontend Foundation |
+| v0.0.2 | ✅ | Event Engine |
+| v0.0.3 | ✅ | Backend Event Receiver |
+| v0.0.4 | ✅ | Event Persistence |
+| v0.0.5 | ✅ | Frontend Workspace State |
+| v0.0.6 | ✅ | Event Foundation |
 
 ---
 
 # Current Status
 
-🚧 Active Development
+🚧 **Active Development**
 
-The current milestone focuses on delivering the first usable version of AegisFlow with a complete frontend, backend, database, and event pipeline.
+The project currently provides:
+
+- Modular frontend workspace
+- Backend session management
+- Rich Event Lifecycle
+- PostgreSQL persistence
+- Alembic migrations
+- Event validation pipeline
+- Session–event relationship
+- End-to-end verified event flow
+
+The next major milestone will build upon this foundation to introduce a Timeline generated from the stored event history.
+
+---
+
+# Guiding Principles
+
+- Build one complete milestone at a time.
+- Every feature must produce meaningful events.
+- Architecture before optimization.
+- Backend-first design.
+- Validate before persistence.
+- Intelligence grows from understanding, not from storing more data.
 
 ---
 

@@ -4,7 +4,45 @@ All notable changes to AegisFlow are documented in this file.
 
 ---
 
-# Changelog
+
+## [v0.0.6] - 2026-08-03
+
+### Added
+
+- Introduced persistent session management with a dedicated `sessions` table.
+- Redesigned the `events` table using a normalized event schema.
+- Added a foreign key relationship between sessions and events.
+- Implemented Session API and Session Service.
+- Introduced Rich Event Lifecycle with seven business events:
+  - `session.started`
+  - `workspace.project.updated`
+  - `workspace.task.updated`
+  - `workspace.note.updated`
+  - `session.summary.updated`
+  - `session.next_step.updated`
+  - `session.completed`
+- Added frontend and backend event registries.
+- Added backend event validation and payload contract validation.
+- Added session reference validation before event persistence.
+- Integrated Alembic for database schema migrations.
+
+### Changed
+
+- Refactored the frontend to create backend sessions before emitting events.
+- Replaced the legacy event structure (`event_id`, `type`, `timestamp`) with the normalized event model (`id`, `session_id`, `event_type`, `occurred_at`, `payload`, `created_at`).
+- Updated the Live Event Console to consume backend event responses.
+- Standardized event payloads across the frontend and backend.
+
+### Verified
+
+- Verified end-to-end session creation.
+- Verified session–event relationship through foreign keys.
+- Verified Rich Event Lifecycle event ordering.
+- Verified payload validation and backend event validation.
+- Verified PostgreSQL persistence through pgAdmin.
+- Verified frontend rendering using backend event responses.
+- Verified Alembic migration workflow.
+
 
 ## [v0.0.5] - 2026-07-18
 
