@@ -17,6 +17,9 @@ import { SessionService } from "./services/session-service.js";
 
 import { EventTypes } from "./constants/event-types.js";
 
+import { TimelineService } from "./services/timeline-service.js";
+import { renderTimeline } from "./ui/timeline.js";
+
 // =====================================================
 // Session Service
 // =====================================================
@@ -95,12 +98,18 @@ async function saveSession() {
     SessionState.currentSession.endedAt =
         new Date();
 
+    const sessionId = SessionState.currentSession.id;
+
     SessionState.previousSession =
         SessionState.currentSession;
 
     SessionState.currentSession = null;
 
     renderPreviousSession();
+
+    const timeline = await TimelineService.get(sessionId);
+
+    renderTimeline(timeline);
 
     WorkspaceUI.endSession();
 
