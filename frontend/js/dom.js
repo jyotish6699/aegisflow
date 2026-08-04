@@ -60,6 +60,12 @@ export const DOM = {
     // Live Events
 
     events:
-        document.getElementById("events")
+        document.getElementById("events"),
+
+    timelineTitle:
+        document.getElementById("timeline-title"),
+
+    timelineCount:
+        document.getElementById("timeline-count"),
 
 };
