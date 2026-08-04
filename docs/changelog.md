@@ -4,6 +4,37 @@ All notable changes to AegisFlow are documented in this file.
 
 ---
 
+## [v0.0.7] - 2026-08-04
+
+### Added
+
+- Introduced the first Timeline read model for reconstructing developer sessions.
+- Added Timeline API for retrieving complete session timelines.
+- Implemented Timeline Service for rebuilding sessions from persisted events.
+- Added Timeline and TimelineEvent response schemas.
+- Introduced frontend Timeline Service for consuming the Timeline API.
+- Added Timeline UI for displaying reconstructed session history.
+- Added human-readable event labels.
+- Added timeline event counter.
+- Added empty timeline handling.
+
+### Changed
+
+- Replaced the runtime Live Event Console with a database-backed Timeline view.
+- Refactored the frontend to render persisted events instead of runtime event emissions.
+- Standardized timeline rendering with reusable formatting helpers.
+- Improved timestamp formatting for chronological event display.
+
+### Verified
+
+- Verified Timeline API responses.
+- Verified chronological event ordering.
+- Verified session reconstruction from persisted events.
+- Verified end-to-end Timeline generation from PostgreSQL.
+- Verified frontend Timeline rendering.
+- Verified event count accuracy.
+- Verified Timeline lifecycle from database to UI.
+
 
 ## [v0.0.6] - 2026-08-03
 

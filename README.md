@@ -50,7 +50,7 @@ The current implementation includes:
 - SQLAlchemy ORM
 - Alembic Database Migrations
 - Backend Event Validation
-- Live Event Console
+- Timeline View
 
 ---
 
@@ -151,6 +151,15 @@ Service Layer
         │
         ▼
 PostgreSQL
+        │
+        ▼
+Timeline Service
+        │
+        ▼
+Timeline API
+        │
+        ▼
+Timeline UI
 ```
 
 ---
@@ -390,13 +399,15 @@ The project currently provides:
 - Modular frontend workspace
 - Backend session management
 - Rich Event Lifecycle
+- Timeline API
+- Timeline UI
 - PostgreSQL persistence
 - Alembic migrations
 - Event validation pipeline
 - Session–event relationship
-- End-to-end verified event flow
+- End-to-end verified event and timeline pipeline
 
-The next major milestone will build upon this foundation to introduce a Timeline generated from the stored event history.
+The next major milestone focuses on the Observation Foundation, where developer activity will begin generating events automatically instead of relying on manual workspace input.
 
 ---
 
