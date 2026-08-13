@@ -31,6 +31,7 @@ backend/
     │   ├── metadata.py             # Shared metadata
     │   ├── enums.py                # Common enums
     │   └── exceptions.py           # Observation exceptions
+    |   └── provider.py             # Observation Provider contract
     │
     ├── lifecycle/
     │   ├── runtime.py              # Observation runtime
