@@ -4,6 +4,101 @@ All notable changes to AegisFlow are documented in this file.
 
 ---
 
+## [v0.0.8] - Observation Foundation
+
+### Status
+
+🚧 In Progress
+
+### Added
+
+- Introduced the Observation Foundation as a modular architecture for collecting developer workspace activity.
+- Added the canonical `Observation` model.
+- Added shared observation metadata definitions.
+- Added common observation and provider enums.
+- Added dedicated Observation Provider contract.
+- Added provider lifecycle contract:
+  - `initialize()`
+  - `start()`
+  - `observe()`
+  - `stop()`
+- Added provider registry for managing available Observation Providers.
+- Added provider discovery abstraction.
+- Added provider validation.
+- Added Observation Foundation configuration model.
+- Added configuration loader.
+- Added in-process Observation Bus.
+- Added Observation Publisher.
+- Added Observation Subscriber contract.
+- Added provider health tracking.
+- Added provider loading based on configuration.
+- Added provider startup coordination.
+- Added provider shutdown coordination.
+
+### Architecture
+
+Established the following Observation Foundation components:
+
+- Observation Core
+- Provider Contract
+- Provider Registry
+- Provider Discovery
+- Provider Validation
+- Observation Configuration
+- Observation Bus
+- Observation Publisher
+- Observation Subscriber
+- Provider Health Tracking
+- Provider Loader
+- Provider Starter
+- Provider Stopper
+
+### Design Principles
+
+- Providers are independently modularized.
+- Providers communicate through the Observation Publisher and Observation Bus.
+- Subscribers receive complete `Observation` objects.
+- Raw dictionaries are not used as the internal Observation contract.
+- Provider-specific logic remains isolated from the Observation Foundation.
+- Provider lifecycle is managed independently from provider implementation.
+- One provider failure must not automatically stop unrelated providers.
+- Provider-specific configuration belongs to the provider implementation.
+- The Observation Foundation does not interpret observations.
+- The Observation Foundation does not generate business events directly.
+
+### Verification
+
+- Verified Observation core model integration.
+- Verified provider contract integration.
+- Verified provider registry structure.
+- Verified configuration foundation.
+- Verified Observation Bus architecture.
+- Verified provider health tracking.
+- Verified provider loading abstraction.
+- Verified provider startup and shutdown abstractions.
+
+### In Progress
+
+The reusable Observation Foundation is complete.
+
+The next development stage is the implementation of the first concrete Observation Provider:
+
+- Git Provider
+
+Future providers will follow the same provider contract and modular architecture.
+
+### Not Yet Completed
+
+- Git Provider implementation
+- Terminal Provider
+- Filesystem Provider
+- Provider Runtime
+- Automatic Git observation
+- Provider-specific observation generation
+- Observation-to-event interpretation
+- Context Engine integration
+- `v0.0.8` release tag
+
 ## [v0.0.7] - 2026-08-04
 
 ### Added
