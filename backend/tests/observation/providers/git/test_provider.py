@@ -158,6 +158,116 @@ def test_no_observation_for_non_git_directory(tmp_path: Path) -> None:
     assert observations == []
 
 
+def test_no_observation_before_start(tmp_path: Path) -> None:
+    """
+    The provider should not emit observations before it is started.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    initialize_git_repository(repository)
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        return observations
+
+    observations = asyncio.run(run_provider())
+
+    assert observations == []
+
+
+def test_repository_detected_emitted_only_once(
+    tmp_path: Path,
+) -> None:
+    """
+    repository.detected should be emitted only once
+    during the provider lifecycle.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    initialize_git_repository(repository)
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        first_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        second_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return first_observations, second_observations
+
+    first_observations, second_observations = asyncio.run(
+        run_provider()
+    )
+
+    assert len(first_observations) == 1
+    assert first_observations[0].observation_type == "repository.detected"
+
+    assert second_observations == []
+
+
+def test_no_observation_after_stop(tmp_path: Path) -> None:
+    """
+    The provider should not emit observations after it is stopped.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    initialize_git_repository(repository)
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        initial_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        observations_after_stop = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        return initial_observations, observations_after_stop
+
+    initial_observations, observations_after_stop = asyncio.run(
+        run_provider()
+    )
+
+    assert len(initial_observations) == 1
+    assert initial_observations[0].observation_type == "repository.detected"
+
+    assert observations_after_stop == []
+
+
 def test_branch_changed_observation(tmp_path: Path) -> None:
     """
     A branch change should produce exactly one
