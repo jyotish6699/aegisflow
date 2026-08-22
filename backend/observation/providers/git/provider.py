@@ -145,6 +145,26 @@ class GitProvider(ObservationProvider):
             yield observation
             return
 
+        if current_state.commit != self._state.commit:
+            observation = Observation(
+                provider=ProviderType.GIT,
+                observation_type="commit.changed",
+                metadata=ObservationMetadata(
+                    source="git",
+                    attributes={
+                        "workspace": str(self._workspace),
+                        "repository": str(self._repository_path),
+                        "commit": current_state.commit,
+                        "commit_message": current_state.commit_message,
+                    },
+                ),
+            )
+
+            self._state = current_state
+
+            yield observation
+            return
+
         self._state = current_state
 
     async def stop(self) -> None:

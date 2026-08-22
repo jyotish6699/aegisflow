@@ -6,6 +6,80 @@ from observation.core.enums import ProviderType
 from observation.providers.git.provider import GitProvider
 
 
+def initialize_git_repository(repository: Path) -> str:
+    """
+    Create a Git repository with one initial commit.
+
+    Returns the initial commit SHA.
+    """
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.name",
+            "AegisFlow Test",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.email",
+            "test@aegisflow.local",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    initial_file = repository / "initial.txt"
+    initial_file.write_text("initial")
+
+    subprocess.run(
+        ["git", "-C", str(repository), "add", "."],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "commit",
+            "-m",
+            "feat(git): initial repository",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    return subprocess.run(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
 def test_repository_detected(tmp_path: Path) -> None:
     """
     A Git repository should produce exactly one
@@ -431,3 +505,224 @@ def test_working_tree_changed_to_clean(tmp_path: Path) -> None:
 
     assert observation.observation_type == "working_tree.changed"
     assert observation.metadata.attributes["working_tree_clean"] is True
+
+
+def test_commit_changed_observation(tmp_path: Path) -> None:
+    """
+    A new Git commit should produce exactly one
+    commit.changed observation containing the new
+    commit SHA and commit message.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    initialize_git_repository(repository)
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        # Consume the initial repository.detected observation.
+        initial_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        assert len(initial_observations) == 1
+        assert initial_observations[0].observation_type == "repository.detected"
+
+        # Create a new commit.
+        file = repository / "initial.txt"
+        file.write_text("updated")
+
+        subprocess.run(
+            ["git", "-C", str(repository), "add", "."],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "commit",
+                "-m",
+                "feat(git): update repository",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        expected_commit = subprocess.run(
+            ["git", "-C", str(repository), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return observations, expected_commit
+
+    observations, expected_commit = asyncio.run(run_provider())
+
+    assert len(observations) == 1
+
+    observation = observations[0]
+
+    assert observation.observation_type == "commit.changed"
+    assert observation.provider == ProviderType.GIT
+
+    assert observation.metadata.attributes["commit"] == expected_commit
+    assert (
+        observation.metadata.attributes["commit_message"]
+        == "feat(git): update repository"
+    )
+
+
+def test_commit_changed_observation(tmp_path: Path) -> None:
+    """
+    GitProvider should emit a commit.changed observation when
+    a new commit is created after initialization.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.name",
+            "AegisFlow Test",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.email",
+            "test@aegisflow.local",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    initial_file = repository / "initial.txt"
+    initial_file.write_text("initial")
+
+    subprocess.run(
+        ["git", "-C", str(repository), "add", "."],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "commit",
+            "-m",
+            "feat(git): initial repository",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        # First observation establishes repository detection.
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        assert len(observations) == 1
+        assert observations[0].observation_type == "repository.detected"
+
+        # Create a new commit.
+        initial_file.write_text("updated")
+
+        subprocess.run(
+            ["git", "-C", str(repository), "add", "."],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        commit_message = "feat(git): update repository"
+
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "commit",
+                "-m",
+                commit_message,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        expected_commit = subprocess.run(
+            ["git", "-C", str(repository), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+        # The second observation cycle should detect the new commit.
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return observations, expected_commit, commit_message
+
+    observations, expected_commit, commit_message = asyncio.run(run_provider())
+
+    assert len(observations) == 1
+
+    observation = observations[0]
+
+    assert observation.observation_type == "commit.changed"
+    assert observation.metadata.attributes["commit"] == expected_commit
+    assert observation.metadata.attributes["commit_message"] == commit_message
