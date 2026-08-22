@@ -123,13 +123,10 @@ def test_repository_detected(tmp_path: Path) -> None:
     assert observation.metadata.source == "git"
     assert observation.metadata.version == "1.0"
 
-    assert observation.metadata.attributes["workspace"] == str(
-        repository.resolve()
-    )
-
-    assert observation.metadata.attributes["repository"] == str(
-        repository.resolve()
-    )
+    assert observation.metadata.attributes == {
+        "workspace": str(repository.resolve()),
+        "repository": str(repository.resolve()),
+    }
 
 
 def test_no_observation_for_non_git_directory(tmp_path: Path) -> None:
@@ -254,7 +251,12 @@ def test_branch_changed_observation(tmp_path: Path) -> None:
     observation = observations[0]
 
     assert observation.observation_type == "branch.changed"
-    assert observation.metadata.attributes["branch"] == "feature/test-branch"
+
+    assert observation.metadata.attributes == {
+        "workspace": str(repository.resolve()),
+        "repository": str(repository.resolve()),
+        "branch": "feature/test-branch",
+    }
 
 
 def test_no_observation_when_branch_unchanged(tmp_path: Path) -> None:
@@ -404,7 +406,12 @@ def test_working_tree_changed_to_dirty(tmp_path: Path) -> None:
     observation = observations[0]
 
     assert observation.observation_type == "working_tree.changed"
-    assert observation.metadata.attributes["working_tree_clean"] is False
+
+    assert observation.metadata.attributes == {
+        "workspace": str(repository.resolve()),
+        "repository": str(repository.resolve()),
+        "working_tree_clean": False,
+    }
 
 
 def test_working_tree_changed_to_clean(tmp_path: Path) -> None:
@@ -504,91 +511,12 @@ def test_working_tree_changed_to_clean(tmp_path: Path) -> None:
     observation = observations[0]
 
     assert observation.observation_type == "working_tree.changed"
-    assert observation.metadata.attributes["working_tree_clean"] is True
 
-
-def test_commit_changed_observation(tmp_path: Path) -> None:
-    """
-    A new Git commit should produce exactly one
-    commit.changed observation containing the new
-    commit SHA and commit message.
-    """
-
-    repository = tmp_path / "repository"
-    repository.mkdir()
-
-    initialize_git_repository(repository)
-
-    async def run_provider():
-        provider = GitProvider(repository)
-
-        await provider.initialize()
-        await provider.start()
-
-        # Consume the initial repository.detected observation.
-        initial_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
-
-        assert len(initial_observations) == 1
-        assert initial_observations[0].observation_type == "repository.detected"
-
-        # Create a new commit.
-        file = repository / "initial.txt"
-        file.write_text("updated")
-
-        subprocess.run(
-            ["git", "-C", str(repository), "add", "."],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        subprocess.run(
-            [
-                "git",
-                "-C",
-                str(repository),
-                "commit",
-                "-m",
-                "feat(git): update repository",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        expected_commit = subprocess.run(
-            ["git", "-C", str(repository), "rev-parse", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
-
-        await provider.stop()
-
-        return observations, expected_commit
-
-    observations, expected_commit = asyncio.run(run_provider())
-
-    assert len(observations) == 1
-
-    observation = observations[0]
-
-    assert observation.observation_type == "commit.changed"
-    assert observation.provider == ProviderType.GIT
-
-    assert observation.metadata.attributes["commit"] == expected_commit
-    assert (
-        observation.metadata.attributes["commit_message"]
-        == "feat(git): update repository"
-    )
+    assert observation.metadata.attributes == {
+        "workspace": str(repository.resolve()),
+        "repository": str(repository.resolve()),
+        "working_tree_clean": True,
+    }
 
 
 def test_commit_changed_observation(tmp_path: Path) -> None:
@@ -724,5 +652,10 @@ def test_commit_changed_observation(tmp_path: Path) -> None:
     observation = observations[0]
 
     assert observation.observation_type == "commit.changed"
-    assert observation.metadata.attributes["commit"] == expected_commit
-    assert observation.metadata.attributes["commit_message"] == commit_message
+
+    assert observation.metadata.attributes == {
+        "workspace": str(repository.resolve()),
+        "repository": str(repository.resolve()),
+        "commit": expected_commit,
+        "commit_message": commit_message,
+    }
