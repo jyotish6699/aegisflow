@@ -344,8 +344,8 @@ Context Engine
 | Version | Layer | Purpose | Status |
 |----------|-------|---------|--------|
 | **v0.0.6** | Event Foundation | Persist structured events and sessions | ✅ Completed |
-| **v0.0.7** | Timeline Foundation | Reconstruct developer work from events | 🚧 Planned |
-| **v0.0.8** | Observation Foundation | Automatically generate events from developer activity | 📋 Planned |
+| **v0.0.7** | Timeline Foundation | Reconstruct developer work from events | ✅ Completed |
+| **v0.0.8** | Observation Foundation | Automatically generate events from developer activity | 🚧 In Progress |
 | **v0.0.9** | Interpretation Engine | Transform observations into meaningful insights | 📋 Planned |
 | **v0.1.0** | Context Engine | Build continuous understanding from accumulated knowledge | 📋 Planned |
 
