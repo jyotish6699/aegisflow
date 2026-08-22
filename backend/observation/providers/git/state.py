@@ -25,6 +25,8 @@ class GitState(BaseModel):
 
     commit: str
 
+    commit_message: str
+
     @classmethod
     def read(cls, repository: Path) -> "GitState":
         """
@@ -57,8 +59,23 @@ class GitState(BaseModel):
                 "Git repository does not have an initial commit."
             ) from exc
 
+        commit_message = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "log",
+                "-1",
+                "--pretty=%s",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
         return cls(
             branch=branch,
             working_tree_clean=not bool(status.strip()),
             commit=commit,
+            commit_message=commit_message,
         )

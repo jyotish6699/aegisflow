@@ -50,7 +50,14 @@ def initialize_git_repository(repository: Path) -> str:
     )
 
     subprocess.run(
-        ["git", "-C", str(repository), "commit", "-m", "Initial commit"],
+        [
+            "git",
+            "-C",
+            str(repository),
+            "commit",
+            "-m",
+            "feat(git): initial repository",
+        ],
         check=True,
         capture_output=True,
         text=True,
@@ -88,6 +95,7 @@ def test_git_state_reads_clean_repository(tmp_path: Path) -> None:
     assert state.branch == branch
     assert state.working_tree_clean is True
     assert state.commit == expected_commit
+    assert state.commit_message == "feat(git): initial repository"
 
 
 def test_git_state_detects_dirty_working_tree(tmp_path: Path) -> None:
