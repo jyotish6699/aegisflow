@@ -63,7 +63,7 @@ class GitProvider(ObservationProvider):
         developer workflow prototype.
 
         The provider emits repository.detected once and
-        subsequently checks for branch changes.
+        subsequently checks for Git state changes.
         """
         if not self._started:
             return
@@ -107,26 +107,45 @@ class GitProvider(ObservationProvider):
             self._state = current_state
             return
 
-        if current_state.branch == self._state.branch:
+        if current_state.branch != self._state.branch:
+            observation = Observation(
+                provider=ProviderType.GIT,
+                observation_type="branch.changed",
+                metadata=ObservationMetadata(
+                    source="git",
+                    attributes={
+                        "workspace": str(self._workspace),
+                        "repository": str(self._repository_path),
+                        "branch": current_state.branch,
+                    },
+                ),
+            )
+
             self._state = current_state
+
+            yield observation
             return
 
-        observation = Observation(
-            provider=ProviderType.GIT,
-            observation_type="branch.changed",
-            metadata=ObservationMetadata(
-                source="git",
-                attributes={
-                    "workspace": str(self._workspace),
-                    "repository": str(self._repository_path),
-                    "branch": current_state.branch,
-                },
-            ),
-        )
+        if current_state.working_tree_clean != self._state.working_tree_clean:
+            observation = Observation(
+                provider=ProviderType.GIT,
+                observation_type="working_tree.changed",
+                metadata=ObservationMetadata(
+                    source="git",
+                    attributes={
+                        "workspace": str(self._workspace),
+                        "repository": str(self._repository_path),
+                        "working_tree_clean": current_state.working_tree_clean,
+                    },
+                ),
+            )
+
+            self._state = current_state
+
+            yield observation
+            return
 
         self._state = current_state
-
-        yield observation
 
     async def stop(self) -> None:
         """

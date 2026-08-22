@@ -253,3 +253,181 @@ def test_no_observation_when_branch_unchanged(tmp_path: Path) -> None:
     observations = asyncio.run(run_provider())
 
     assert observations == []
+
+
+def test_working_tree_changed_to_dirty(tmp_path: Path) -> None:
+    """
+    A clean working tree becoming dirty should produce
+    a working_tree.changed observation containing the
+    actual current state.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.email",
+            "test@example.com",
+        ],
+        check=True,
+    )
+
+    (repository / "README.md").write_text("initial\n")
+
+    subprocess.run(
+        ["git", "-C", str(repository), "add", "README.md"],
+        check=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "initial commit"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        async for _ in provider.observe():
+            pass
+
+        (repository / "README.md").write_text("changed\n")
+
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return observations
+
+    observations = asyncio.run(run_provider())
+
+    assert len(observations) == 1
+
+    observation = observations[0]
+
+    assert observation.observation_type == "working_tree.changed"
+    assert observation.metadata.attributes["working_tree_clean"] is False
+
+
+def test_working_tree_changed_to_clean(tmp_path: Path) -> None:
+    """
+    A dirty working tree becoming clean should produce
+    a working_tree.changed observation containing the
+    actual current state.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.email",
+            "test@example.com",
+        ],
+        check=True,
+    )
+
+    (repository / "README.md").write_text("initial\n")
+
+    subprocess.run(
+        ["git", "-C", str(repository), "add", "README.md"],
+        check=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "initial commit"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        async for _ in provider.observe():
+            pass
+
+        # clean → dirty
+        (repository / "README.md").write_text("changed\n")
+
+        dirty_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        assert len(dirty_observations) == 1
+        assert (
+            dirty_observations[0].observation_type
+            == "working_tree.changed"
+        )
+        assert (
+            dirty_observations[0].metadata.attributes["working_tree_clean"]
+            is False
+        )
+
+        # dirty → clean
+        subprocess.run(
+            ["git", "-C", str(repository), "checkout", "--", "README.md"],
+            check=True,
+        )
+
+        clean_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return clean_observations
+
+    observations = asyncio.run(run_provider())
+
+    assert len(observations) == 1
+
+    observation = observations[0]
+
+    assert observation.observation_type == "working_tree.changed"
+    assert observation.metadata.attributes["working_tree_clean"] is True
