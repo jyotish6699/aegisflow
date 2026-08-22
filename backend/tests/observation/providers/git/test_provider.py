@@ -85,3 +85,171 @@ def test_no_observation_for_non_git_directory(tmp_path: Path) -> None:
     observations = asyncio.run(run_provider())
 
     assert observations == []
+
+
+def test_branch_changed_observation(tmp_path: Path) -> None:
+    """
+    A branch change should produce exactly one
+    branch.changed observation containing the actual
+    branch name.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.email",
+            "test@example.com",
+        ],
+        check=True,
+    )
+
+    (repository / "README.md").write_text("initial\n")
+
+    subprocess.run(
+        ["git", "-C", str(repository), "add", "README.md"],
+        check=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "initial commit"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        # Consume the initial repository.detected observation.
+        initial_observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        assert len(initial_observations) == 1
+        assert initial_observations[0].observation_type == "repository.detected"
+
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "switch",
+                "-c",
+                "feature/test-branch",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return observations
+
+    observations = asyncio.run(run_provider())
+
+    assert len(observations) == 1
+
+    observation = observations[0]
+
+    assert observation.observation_type == "branch.changed"
+    assert observation.metadata.attributes["branch"] == "feature/test-branch"
+
+
+def test_no_observation_when_branch_unchanged(tmp_path: Path) -> None:
+    """
+    No branch.changed observation should be produced when
+    the repository remains on the same branch.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "config",
+            "user.email",
+            "test@example.com",
+        ],
+        check=True,
+    )
+
+    (repository / "README.md").write_text("initial\n")
+
+    subprocess.run(
+        ["git", "-C", str(repository), "add", "README.md"],
+        check=True,
+    )
+
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "initial commit"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    async def run_provider():
+        provider = GitProvider(repository)
+
+        await provider.initialize()
+        await provider.start()
+
+        # Consume repository.detected.
+        async for _ in provider.observe():
+            pass
+
+        # Same branch, so no branch.changed event.
+        observations = [
+            observation
+            async for observation in provider.observe()
+        ]
+
+        await provider.stop()
+
+        return observations
+
+    observations = asyncio.run(run_provider())
+
+    assert observations == []

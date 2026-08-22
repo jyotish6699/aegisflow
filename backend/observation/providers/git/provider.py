@@ -59,10 +59,11 @@ class GitProvider(ObservationProvider):
 
     async def observe(self) -> AsyncIterator[Observation]:
         """
-        Produce the repository.detected observation.
+        Produce Git observations defined by the minimal
+        developer workflow prototype.
 
-        This step implements only repository detection.
-        Other Git observations are implemented in later steps.
+        The provider emits repository.detected once and
+        subsequently checks for branch changes.
         """
         if not self._started:
             return
@@ -70,22 +71,60 @@ class GitProvider(ObservationProvider):
         if self._repository_path is None:
             return
 
-        if self._repository_observation_emitted:
+        # -------------------------------------------------
+        # Repository Detection
+        # -------------------------------------------------
+
+        if not self._repository_observation_emitted:
+            observation = Observation(
+                provider=ProviderType.GIT,
+                observation_type="repository.detected",
+                metadata=ObservationMetadata(
+                    source="git",
+                    attributes={
+                        "workspace": str(self._workspace),
+                        "repository": str(self._repository_path),
+                    },
+                ),
+            )
+
+            self._repository_observation_emitted = True
+
+            yield observation
+            return
+
+        # -------------------------------------------------
+        # Branch Change Detection
+        # -------------------------------------------------
+
+        try:
+            current_state = GitState.read(self._repository_path)
+        except GitStateUnavailableError:
+            self._state = None
+            return
+
+        if self._state is None:
+            self._state = current_state
+            return
+
+        if current_state.branch == self._state.branch:
+            self._state = current_state
             return
 
         observation = Observation(
             provider=ProviderType.GIT,
-            observation_type="repository.detected",
+            observation_type="branch.changed",
             metadata=ObservationMetadata(
                 source="git",
                 attributes={
                     "workspace": str(self._workspace),
                     "repository": str(self._repository_path),
+                    "branch": current_state.branch,
                 },
             ),
         )
 
-        self._repository_observation_emitted = True
+        self._state = current_state
 
         yield observation
 
