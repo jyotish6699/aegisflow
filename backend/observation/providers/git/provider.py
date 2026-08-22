@@ -6,7 +6,9 @@ from observation.core.metadata import ObservationMetadata
 from observation.core.observation import Observation
 from observation.core.provider import ObservationProvider
 
+from .exceptions import GitStateUnavailableError
 from .repository import GitRepository
+from .state import GitState
 
 
 class GitProvider(ObservationProvider):
@@ -23,6 +25,8 @@ class GitProvider(ObservationProvider):
         self._repository = GitRepository(self._workspace)
 
         self._repository_path: Path | None = None
+        self._state: GitState | None = None
+
         self._started = False
         self._repository_observation_emitted = False
 
@@ -33,9 +37,19 @@ class GitProvider(ObservationProvider):
 
     async def initialize(self) -> None:
         """
-        Discover the Git repository associated with the workspace.
+        Discover the Git repository associated with the workspace
+        and establish its initial Git state when available.
         """
         self._repository_path = self._repository.discover()
+
+        if self._repository_path is None:
+            self._state = None
+            return
+
+        try:
+            self._state = GitState.read(self._repository_path)
+        except GitStateUnavailableError:
+            self._state = None
 
     async def start(self) -> None:
         """
@@ -80,3 +94,4 @@ class GitProvider(ObservationProvider):
         Stop the Git Provider and release provider state.
         """
         self._started = False
+        self._state = None

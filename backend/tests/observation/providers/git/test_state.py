@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 from observation.providers.git.state import GitState
-
+from observation.providers.git.exceptions import GitStateUnavailableError
 
 def initialize_git_repository(repository: Path) -> str:
     """
@@ -106,3 +106,32 @@ def test_git_state_detects_dirty_working_tree(tmp_path: Path) -> None:
     state = GitState.read(repository)
 
     assert state.working_tree_clean is False
+
+
+def test_git_state_unavailable_for_unborn_repository(
+    tmp_path: Path,
+) -> None:
+    """
+    GitState should report unavailable state when a repository
+    has been initialized but has no commit yet.
+    """
+
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    try:
+        GitState.read(repository)
+    except GitStateUnavailableError:
+        return
+
+    raise AssertionError(
+        "GitState.read() should raise GitStateUnavailableError "
+        "for an unborn repository."
+    )

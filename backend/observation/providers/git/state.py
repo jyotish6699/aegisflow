@@ -3,6 +3,8 @@ import subprocess
 
 from pydantic import BaseModel
 
+from .exceptions import GitStateUnavailableError
+
 
 # =====================================================
 # Git State
@@ -43,12 +45,17 @@ class GitState(BaseModel):
             text=True,
         ).stdout
 
-        commit = subprocess.run(
-            ["git", "-C", str(repository), "rev-parse", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
+        try:
+            commit = subprocess.run(
+                ["git", "-C", str(repository), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        except subprocess.CalledProcessError as exc:
+            raise GitStateUnavailableError(
+                "Git repository does not have an initial commit."
+            ) from exc
 
         return cls(
             branch=branch,
