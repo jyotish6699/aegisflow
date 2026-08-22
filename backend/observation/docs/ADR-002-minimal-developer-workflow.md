@@ -1,20 +1,20 @@
-# ADR-002 — Minimal Developer Workflow Observation Model
+**# ADR-002 — Minimal Developer Workflow Observation Model**
 
-## Status
+**## Status**
 
-**Accepted**
+**\*\*Accepted\*\***
 
-## Date
+**## Date**
 
-2026-08-18
+2026-08-22
 
-## Decision
+**## Decision**
 
-Accepted as the low-level behavioral contract for the first Observation Provider implementation.
+Accepted as the low-level behavioral contract for the first Observation Provider implementation. The Git Provider implementation defined by this ADR is now complete and verified. Terminal, Filesystem, and VS Code providers remain planned work within the broader prototype scope.
 
----
+**---**
 
-# 1. Context
+**# 1. Context**
 
 AegisFlow is intended to continuously understand meaningful developer workspace activity.
 
@@ -22,67 +22,109 @@ The Observation Foundation established the reusable infrastructure required to c
 
 The foundation provides:
 
-- Observation model
-- Observation metadata
-- Observation Provider contract
-- Provider Registry
-- Provider Discovery
-- Provider Validation
-- Configuration
-- Observation Bus
-- Observation Publisher
-- Observation Subscriber
-- Provider Health
-- Provider Loader
-- Provider Starter
-- Provider Stopper
+\- Observation model
+
+\- Observation metadata
+
+\- Observation Provider contract
+
+\- Provider Registry
+
+\- Provider Discovery
+
+\- Provider Validation
+
+\- Configuration
+
+\- Observation Bus
+
+\- Observation Publisher
+
+\- Observation Subscriber
+
+\- Provider Health
+
+\- Provider Loader
+
+\- Provider Starter
+
+\- Provider Stopper
 
 The next requirement is to implement concrete Observation Providers.
 
 However, implementing providers independently without first defining their exact responsibilities could cause:
 
-- duplicated observations
-- overlapping provider responsibilities
-- unnecessary observation types
-- provider-specific scope expansion
-- inconsistent metadata
-- unclear testing requirements
-- dependency between providers
-- deviation from the intended developer workflow
-- implementation-driven architecture
+\- duplicated observations
+
+\- overlapping provider responsibilities
+
+\- unnecessary observation types
+
+\- provider-specific scope expansion
+
+\- inconsistent metadata
+
+\- unclear testing requirements
+
+\- dependency between providers
+
+\- deviation from the intended developer workflow
+
+\- implementation-driven architecture
 
 Therefore, AegisFlow will first define a low-level minimal developer workflow observation model.
 
 This ADR establishes that model.
 
----
+**---**
 
-# 2. Decision Summary
+**# 2. Decision Summary**
 
 The first Observation prototype will observe a developer workspace through four independent providers:
 
-```text
+\`\`\`text
+
 Developer Workspace
+
         │
+
         ├───────────────┬───────────────┬───────────────┐
+
         ▼               ▼               ▼               ▼
+
        Git          Terminal       Filesystem         VS Code
+
      Provider        Provider        Provider         Provider
+
         │               │               │               │
+
         └───────────────┴───────────────┴───────────────┘
+
                                 │
+
                                 ▼
+
                            Observation
+
                                 │
+
                                 ▼
+
                        Observation Publisher
+
                                 │
+
                                 ▼
+
                         Observation Bus
+
                                 │
+
                                 ▼
+
                          Future Consumers
-```
+
+\`\`\`
 
 The four providers observe different dimensions of developer activity.
 
@@ -90,9 +132,9 @@ They must remain independently responsible for their own domain.
 
 No provider may become responsible for another provider's domain.
 
----
+**---**
 
-# 3. Core Principle
+**# 3. Core Principle**
 
 The prototype is a behavioral contract.
 
@@ -102,61 +144,147 @@ Implementation must not expand provider scope without first updating this ADR.
 
 The intended development process is:
 
-```text
+\`\`\`text
+
 ADR-002
+
    │
+
    ▼
+
 Provider Contract
+
    │
+
    ▼
+
 Provider Implementation
+
    │
+
    ▼
+
 Provider Tests
+
    │
+
    ▼
+
 Integration Verification
-```
+
+\`\`\`
 
 If implementation reveals a missing requirement:
 
-```text
+\`\`\`text
+
 Implementation
+
       │
+
       ▼
+
 Missing Requirement
+
       │
+
       ▼
+
 Update ADR-002
+
       │
+
       ▼
+
 Review Decision
+
       │
+
       ▼
+
 Update Implementation
-```
+
+\`\`\`
 
 Provider implementation must not silently introduce new observation types.
 
----
+**---**
 
-# 4. Minimal Prototype Goal
+**# 3.1 Git Provider Implementation Status**
+
+As of 2026-08-22, the Git Provider defined by this ADR has been implemented and verified.
+
+Verified behavior includes:
+
+- Local repository discovery.
+- One-time `repository.detected` emission.
+- No observation before provider start.
+- Branch change detection.
+- Dirty working-tree detection.
+- Clean working-tree detection after commit.
+- Local commit state change detection.
+- Correct Git observation metadata.
+- No duplicate observations for unchanged state.
+- No observations after provider stop.
+- End-to-end lifecycle verification.
+
+The implemented Git contract uses the observation type `commit.changed` and the metadata fields actually produced by the provider:
+
+```text
+
+repository.detected
+    workspace
+    repository
+
+branch.changed
+    workspace
+    repository
+    branch
+
+working_tree.changed
+    workspace
+    repository
+    working_tree_clean
+
+commit.changed
+    workspace
+    repository
+    commit
+    commit_message
+
+```
+
+The broader Terminal, Filesystem, and VS Code provider contracts remain defined by this ADR but are not claimed as implemented by the Git Provider milestone.
+
+**---**
+
+**# 4. Minimal Prototype Goal**
 
 The first Observation prototype must be able to reconstruct a meaningful developer workflow.
 
 The prototype should be able to answer:
 
-- Which workspace did the developer work in?
-- Which project/workspace context was active?
-- Which file became active in the editor?
-- Which files changed?
-- Which commands were executed?
-- What was the result of those commands?
-- Which Git repository was involved?
-- Which branch was active?
-- Did the working tree change?
-- Was a local commit created?
-- When did the workspace open and close?
+\- Which workspace did the developer work in?
+
+\- Which project/workspace context was active?
+
+\- Which file became active in the editor?
+
+\- Which files changed?
+
+\- Which commands were executed?
+
+\- What was the result of those commands?
+
+\- Which Git repository was involved?
+
+\- Which branch was active?
+
+\- Did the working tree change?
+
+\- Was a local commit created?
+
+\- When did the workspace open and close?
 
 The prototype does not attempt to understand the meaning of the work yet.
 
@@ -164,97 +292,123 @@ It only collects objective observations.
 
 Interpretation belongs to a future layer.
 
----
+**---**
 
-# 5. Workspace Model
+**# 5. Workspace Model**
 
-AegisFlow uses the concept of a **Workspace** as the common context in which provider observations occur.
+AegisFlow uses the concept of a **\*\*Workspace\*\*** as the common context in which provider observations occur.
 
 For the minimal prototype:
 
-```text
-Workspace
-    │
-    ├── Root Directory
-    │
-    ├── Project Context
-    │
-    ├── Repository
-    │
-    ├── Active Editor Context
-    │
-    └── Terminal Context
-```
+\`\`\`text
 
-## 5.1 Workspace
+Workspace
+
+    │
+
+    ├── Root Directory
+
+    │
+
+    ├── Project Context
+
+    │
+
+    ├── Repository
+
+    │
+
+    ├── Active Editor Context
+
+    │
+
+    └── Terminal Context
+
+\`\`\`
+
+**## 5.1 Workspace**
 
 A Workspace represents the developer's active development environment.
 
 Example:
 
-```text
+\`\`\`text
+
 /home/jyotish/dev/aegisflow
-```
+
+\`\`\`
 
 The workspace root provides a common correlation point for observations.
 
----
+**---**
 
-## 5.2 Project
+**## 5.2 Project**
 
 For the first prototype, the active project is represented by the workspace root.
 
 Example:
 
-```text
+\`\`\`text
+
 Workspace:
+
 /home/jyotish/dev/aegisflow
 
 Project:
+
 /home/jyotish/dev/aegisflow
-```
+
+\`\`\`
 
 AegisFlow does not yet attempt to infer a higher-level project identity from repository names, package files, Git remotes, or AI interpretation.
 
----
+**---**
 
-## 5.3 Repository
+**## 5.3 Repository**
 
 A Repository represents a local Git repository associated with a workspace.
 
 Example:
 
-```text
+\`\`\`text
+
 Workspace:
+
 /home/jyotish/dev/aegisflow
 
 Repository:
+
 /home/jyotish/dev/aegisflow
-```
+
+\`\`\`
 
 The Git Provider observes local repository state.
 
 It does not depend on GitHub or another remote service.
 
----
+**---**
 
-## 5.4 Active Context
+**## 5.4 Active Context**
 
 Active context represents the part of the workspace currently associated with developer activity.
 
 The minimal prototype uses:
 
-- Workspace root
-- Current working directory
-- Active editor file
-- Repository path
-- Current Git branch
+\- Workspace root
+
+\- Current working directory
+
+\- Active editor file
+
+\- Repository path
+
+\- Current Git branch
 
 These values allow observations from independent providers to be correlated later.
 
----
+**---**
 
-# 6. Local-First Observation Principle
+**# 6. Local-First Observation Principle**
 
 AegisFlow observes the developer's local workspace.
 
@@ -262,1061 +416,1448 @@ Remote services are not required for the Observation Foundation.
 
 For Git:
 
-```text
+\`\`\`text
+
 Developer
+
     │
+
     ▼
+
 Local Git Repository
+
     │
+
     ▼
+
 Git Provider
+
     │
+
     ▼
+
 Observation
-```
+
+\`\`\`
 
 The Git Provider does not require:
 
-```text
+\`\`\`text
+
 GitHub
+
 GitLab
+
 Bitbucket
+
 Remote Git Server
-```
+
+\`\`\`
 
 A local commit is observable even if it has never been pushed.
 
 Example:
 
-```text
+\`\`\`text
+
 git add .
+
 git commit -m "implement provider"
-```
+
+\`\`\`
 
 The commit exists locally.
 
 Therefore:
 
-```text
+\`\`\`text
+
 Local Commit
+
      │
+
      ▼
+
 Git Provider
+
      │
+
      ▼
+
 commit.created
-```
+
+\`\`\`
 
 No remote push is required.
 
----
+**---**
 
-# 7. Provider Responsibilities
+**# 7. Provider Responsibilities**
 
 Each provider owns one specific observation domain.
 
-```text
+\`\`\`text
+
 Git Provider
+
     ↓
+
 Version-control state
 
 Terminal Provider
+
     ↓
+
 Command execution
 
 Filesystem Provider
+
     ↓
+
 Workspace file changes
 
 VS Code Provider
+
     ↓
+
 Editor and workspace context
-```
+
+\`\`\`
 
 Providers must not duplicate another provider's responsibility.
 
----
+**---**
 
-# 8. Provider Responsibility Matrix
+**# 8. Provider Responsibility Matrix**
 
-| Domain | Provider | Responsibility |
-|---|---|---|
-| Git repository state | Git | Observe local Git state |
-| Git branch state | Git | Observe branch changes |
-| Git working tree state | Git | Observe meaningful working-tree state changes |
-| Git commits | Git | Observe local commit creation |
-| Command execution | Terminal | Observe executed commands |
-| Command result | Terminal | Observe command completion and result |
-| File creation | Filesystem | Observe workspace file creation |
-| File modification | Filesystem | Observe workspace file modification |
-| File deletion | Filesystem | Observe workspace file deletion |
-| Workspace opening | VS Code | Observe editor workspace opening |
-| Active file | VS Code | Observe active file changes |
-| Workspace closing | VS Code | Observe editor workspace closing |
+\| Domain | Provider | Responsibility |
 
----
+\|---|---|---|
 
-# 9. Git Provider
+\| Git repository state | Git | Observe local Git state |
+
+\| Git branch state | Git | Observe branch changes |
+
+\| Git working tree state | Git | Observe meaningful working-tree state changes |
+
+\| Git commits | Git | Observe local commit creation |
+
+\| Command execution | Terminal | Observe executed commands |
+
+\| Command result | Terminal | Observe command completion and result |
+
+\| File creation | Filesystem | Observe workspace file creation |
+
+\| File modification | Filesystem | Observe workspace file modification |
+
+\| File deletion | Filesystem | Observe workspace file deletion |
+
+\| Workspace opening | VS Code | Observe editor workspace opening |
+
+\| Active file | VS Code | Observe active file changes |
+
+\| Workspace closing | VS Code | Observe editor workspace closing |
+
+**---**
+
+**# 9. Git Provider**
 
 The Git Provider owns local Git repository observations.
 
-## 9.1 Git Provider Responsibilities
+**## 9.1 Git Provider Responsibilities**
 
 The Git Provider is responsible for:
 
-- Discovering or attaching to a local Git repository within the configured workspace.
-- Tracking the repository's relevant local state.
-- Detecting branch changes.
-- Detecting meaningful working-tree state changes.
-- Detecting local commit creation.
-- Producing Git observations.
-- Publishing complete `Observation` objects through the Observation Publisher.
+\- Discovering or attaching to a local Git repository within the configured workspace.
+
+\- Tracking the repository's relevant local state.
+
+\- Detecting branch changes.
+
+\- Detecting meaningful working-tree state changes.
+
+\- Detecting local commit creation.
+
+\- Producing Git observations.
+
+\- Publishing complete \`Observation\` objects through the Observation Publisher.
 
 The Git Provider is not responsible for:
 
-- Terminal commands.
-- File editor activity.
-- File watching.
-- VS Code state.
-- GitHub activity.
-- Remote push events.
-- Pull request activity.
-- AI interpretation.
-- Business event generation.
+\- Terminal commands.
 
----
+\- File editor activity.
 
-# 10. Git Observation Catalog
+\- File watching.
 
-The initial Git Provider contains exactly these observation types:
+\- VS Code state.
+
+\- GitHub activity.
+
+\- Remote push events.
+
+\- Pull request activity.
+
+\- AI interpretation.
+
+\- Business event generation.
+
+**---**
+
+**# 10. Git Observation Catalog**
+
+The implemented Git Provider contains exactly these observation types:
 
 ```text
+
 repository.detected
+
 branch.changed
+
 working_tree.changed
-commit.created
+
+commit.changed
+
 ```
 
-No additional Git observation types are part of the first prototype.
+These four Git observation types are the locked contract for the completed Git Provider milestone.
 
----
+The original prototype concept of "commit creation" is represented by `commit.changed` because the provider detects a change in the repository's current local HEAD state.
 
-# 11. `repository.detected`
+No additional Git observation types are part of the completed Git Provider scope.
 
-## Owner
+
+**# 11. `repository.detected`**
+
+**## Owner**
 
 Git Provider
 
-## Purpose
+**## Purpose**
 
 Indicate that a local Git repository has been identified within the active workspace.
 
-## Trigger
+**## Trigger**
 
-A valid Git repository is discovered or attached to the active workspace.
+A valid Git repository is discovered or attached to the active workspace during provider initialization.
 
-## Required Metadata
+**## Required Metadata**
 
 ```text
+
 workspace
+
 repository
+
 ```
 
-## Example
+**## Example**
 
 ```text
+
 provider:
+
 git
 
 observation_type:
+
 repository.detected
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow",
+
     "repository": "/home/jyotish/dev/aegisflow"
+
 }
+
 ```
 
-## Must Not Observe
+**## Must Not Observe**
 
 - Remote repository discovery.
 - GitHub repository activity.
 - GitHub push events.
 - GitHub pull requests.
 
-## Test Requirement
+**## Test Requirement**
 
 Given a workspace containing a Git repository:
 
 ```text
+
 workspace
+
     ↓
+
 Git Provider
+
     ↓
+
 repository.detected
+
 ```
 
 The observation must contain the correct workspace and repository paths.
 
----
+The provider must emit this observation only once during the provider lifecycle.
 
-# 12. `branch.changed`
 
-## Owner
+**# 12. `branch.changed`**
+
+**## Owner**
 
 Git Provider
 
-## Purpose
+**## Purpose**
 
 Indicate that the active local Git branch changed.
 
-## Trigger
+**## Trigger**
 
-The repository's current branch changes from one branch to another.
+The repository's current branch changes from the previously observed branch.
 
-## Detection
+**## Detection**
 
 The provider compares:
 
 ```text
+
 previous branch
+
 current branch
+
 ```
 
-## Required Metadata
+**## Required Metadata**
+
+The implemented contract contains:
 
 ```text
+
 workspace
+
 repository
-previous_branch
-current_branch
+
+branch
+
 ```
 
-## Example
+`branch` contains the newly observed branch name.
+
+The current implementation does not expose `previous_branch` as observation metadata.
+
+**## Example**
 
 ```text
+
 provider:
+
 git
 
 observation_type:
+
 branch.changed
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow",
+
     "repository": "/home/jyotish/dev/aegisflow",
-    "previous_branch": "main",
-    "current_branch": "feature/git-provider"
+
+    "branch": "feature/git-provider"
+
 }
+
 ```
 
-## Must Not Observe
+**## Must Not Observe**
 
 The Git Provider must not generate `branch.changed` merely because:
 
 ```text
+
 git branch
+
 git status
+
 git log
+
 git branch --show-current
+
 ```
 
 was executed.
 
 The observation represents a state change, not a command.
 
-## Test Requirement
+**## Test Requirement**
 
-Given:
-
-```text
-main
-```
-
-and then:
+Given a repository whose observed branch changes to:
 
 ```text
+
 feature/git-provider
+
 ```
 
-the provider must produce:
+the provider must produce exactly one:
 
 ```text
+
 branch.changed
+
 ```
 
-with:
+observation with the new branch in the `branch` metadata field.
 
-```text
-previous_branch = main
-current_branch = feature/git-provider
-```
+Repeated observation cycles without another branch transition must not generate duplicates.
 
-Exactly one logical branch change must produce one observation.
 
----
+**# 13. `working_tree.changed`**
 
-# 13. `working_tree.changed`
-
-## Owner
+**## Owner**
 
 Git Provider
 
-## Purpose
+**## Purpose**
 
 Indicate that the repository's meaningful local working-tree state changed.
 
-## Trigger
+**## Trigger**
 
-The provider detects a meaningful transition in Git working-tree state.
+The provider detects a transition in the repository's `working_tree_clean` state.
 
-The first prototype focuses on the existence and state transition of local changes rather than reporting every Git command or every low-level filesystem notification.
+**## Detection**
 
-## Required Metadata
+The provider compares:
 
 ```text
+
+previous working_tree_clean
+
+current working_tree_clean
+
+```
+
+**## Required Metadata**
+
+The implemented contract contains:
+
+```text
+
 workspace
+
 repository
-status
+
+working_tree_clean
+
 ```
 
-Where `status` describes the relevant working-tree state.
-
-Initial supported states:
+`working_tree_clean` is a boolean:
 
 ```text
-clean
-dirty
+
+True  → working tree is clean
+
+False → working tree is dirty
+
 ```
 
-## Example
+**## Example**
 
 ```text
+
 provider:
+
 git
 
 observation_type:
+
 working_tree.changed
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow",
+
     "repository": "/home/jyotish/dev/aegisflow",
-    "status": "dirty"
+
+    "working_tree_clean": false
+
 }
+
 ```
 
-## Must Not Observe
+**## Must Not Observe**
 
 The provider must not generate a working-tree observation merely because:
 
 ```text
+
 git status
+
 git diff
+
 git add
+
 ```
 
 was executed.
 
 The observation represents a detected repository state transition.
 
-## Test Requirement
+**## Test Requirement**
 
 Given:
 
 ```text
+
 clean
 ```
 
 then a meaningful local modification occurs:
 
 ```text
+
 dirty
 ```
 
 the provider must produce:
 
 ```text
+
 working_tree.changed
 ```
 
-A repeated check while the state remains `dirty` must not continuously generate identical observations.
+with:
 
----
+```text
 
-# 14. `commit.created`
+working_tree_clean = False
+```
 
-## Owner
+When the change is committed and the working tree transitions back to clean, the provider must produce one additional:
+
+```text
+
+working_tree.changed
+```
+
+with:
+
+```text
+
+working_tree_clean = True
+```
+
+Repeated checks while the state remains unchanged must not generate duplicate observations.
+
+
+**# 14. `commit.changed`**
+
+**## Owner**
 
 Git Provider
 
-## Purpose
+**## Purpose**
 
-Indicate that a new local Git commit was created.
+Indicate that the repository's observed local commit state changed.
 
-## Trigger
+**## Trigger**
 
-The repository's local `HEAD` changes to a newly created commit.
+The repository's local HEAD changes from the previously observed commit to a different commit.
 
-## Detection
+**## Detection**
 
 The provider compares:
 
 ```text
-previous HEAD
-current HEAD
+
+previous commit
+
+current commit
+
 ```
 
-and determines that the current HEAD represents a newly created local commit.
+The implementation emits `commit.changed` when the current commit differs from the previously observed commit.
 
-## Required Metadata
+**## Required Metadata**
+
+The implemented contract contains:
 
 ```text
+
 workspace
+
 repository
-commit_sha
-branch
-message
+
+commit
+
+commit_message
+
 ```
 
-## Example
+`commit` contains the current commit SHA.
+
+`commit_message` contains the current commit message.
+
+**## Example**
 
 ```text
+
 provider:
+
 git
 
 observation_type:
-commit.created
+
+commit.changed
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow",
+
     "repository": "/home/jyotish/dev/aegisflow",
-    "commit_sha": "abc123...",
-    "branch": "feature/git-provider",
-    "message": "implement git provider"
+
+    "commit": "abc123...",
+
+    "commit_message": "feat(git): update repository"
+
 }
+
 ```
 
-## Must Not Observe
+**## Must Not Observe**
 
-The Git Provider must not create `commit.created` for:
+The Git Provider must not create `commit.changed` for:
 
 - `git log`
 - `git show`
 - `git status`
-- remote push
 - viewing a commit
 - checking a commit
 
-## Test Requirement
+The observation represents a change in observed local Git state, not a command execution.
+
+**## Test Requirement**
 
 Given:
 
 ```text
+
 HEAD = commit A
+
 ```
 
-then:
+then a new local commit creates:
 
 ```text
-git commit
-```
 
-creates:
-
-```text
 commit B
+
 ```
 
-The provider must produce exactly:
+the provider must produce exactly one:
 
 ```text
-commit.created
+
+commit.changed
 ```
 
-for commit B.
+observation for commit B, containing the new commit SHA and commit message.
 
----
+The completed end-to-end test also verifies the lifecycle in which the commit first causes:
 
-# 15. Terminal Provider
+```text
+
+working_tree_clean: False
+
+        ↓
+
+working_tree_clean: True
+
+```
+
+and the subsequent observation cycle reports:
+
+```text
+
+commit.changed
+
+```
+
+for the new HEAD.
+
+
+**# 15. Terminal Provider**
 
 The Terminal Provider owns command execution observations.
 
-## 15.1 Terminal Provider Responsibilities
+**## 15.1 Terminal Provider Responsibilities**
 
 The Terminal Provider is responsible for:
 
-- Detecting commands executed within the monitored workspace.
-- Capturing command start.
-- Capturing command completion.
-- Capturing command result.
-- Capturing the command working directory.
-- Publishing terminal observations.
+\- Detecting commands executed within the monitored workspace.
+
+\- Capturing command start.
+
+\- Capturing command completion.
+
+\- Capturing command result.
+
+\- Capturing the command working directory.
+
+\- Publishing terminal observations.
 
 The Terminal Provider is not responsible for:
 
-- Determining Git semantics.
-- Determining file modifications.
-- Determining editor state.
-- Interpreting the meaning of a command.
-- Generating business events.
+\- Determining Git semantics.
 
----
+\- Determining file modifications.
 
-# 16. Terminal Observation Catalog
+\- Determining editor state.
+
+\- Interpreting the meaning of a command.
+
+\- Generating business events.
+
+**---**
+
+**# 16. Terminal Observation Catalog**
 
 The initial Terminal Provider contains exactly:
 
-```text
+\`\`\`text
+
 command.started
+
 command.completed
-```
 
----
+\`\`\`
 
-# 17. `command.started`
+**---**
 
-## Owner
+**# 17. \`command.started\`**
+
+**## Owner**
 
 Terminal Provider
 
-## Purpose
+**## Purpose**
 
 Indicate that a monitored terminal command began execution.
 
-## Trigger
+**## Trigger**
 
 A command is executed by the monitored terminal.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
+
 cwd
+
 command
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 terminal
 
-observation_type:
+observation\_type:
+
 command.started
 
 metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "cwd": "/home/jyotish/dev/aegisflow",
-    "command": "pytest tests/"
-}
-```
 
-## Must Not Observe
+{
+
+    "workspace": "/home/jyotish/dev/aegisflow",
+
+    "cwd": "/home/jyotish/dev/aegisflow",
+
+    "command": "pytest tests/"
+
+}
+
+\`\`\`
+
+**## Must Not Observe**
 
 The provider must not treat:
 
-- Individual keystrokes
-- Shell prompt rendering
-- Cursor movement
-- Unexecuted command text
+\- Individual keystrokes
 
-as `command.started`.
+\- Shell prompt rendering
 
-## Test Requirement
+\- Cursor movement
+
+\- Unexecuted command text
+
+as \`command.started\`.
+
+**## Test Requirement**
 
 Executing:
 
-```text
+\`\`\`text
+
 pytest tests/
-```
+
+\`\`\`
 
 must produce exactly one:
 
-```text
+\`\`\`text
+
 command.started
-```
+
+\`\`\`
 
 observation.
 
----
+**---**
 
-# 18. `command.completed`
+**# 18. \`command.completed\`**
 
-## Owner
+**## Owner**
 
 Terminal Provider
 
-## Purpose
+**## Purpose**
 
 Indicate that a monitored terminal command completed.
 
-## Trigger
+**## Trigger**
 
 A monitored command exits.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
+
 cwd
+
 command
-exit_code
+
+exit\_code
+
 duration
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 terminal
 
-observation_type:
+observation\_type:
+
 command.completed
 
 metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "cwd": "/home/jyotish/dev/aegisflow",
-    "command": "pytest tests/",
-    "exit_code": 0,
-    "duration": 4.21
-}
-```
 
-## Must Not Observe
+{
+
+    "workspace": "/home/jyotish/dev/aegisflow",
+
+    "cwd": "/home/jyotish/dev/aegisflow",
+
+    "command": "pytest tests/",
+
+    "exit\_code": 0,
+
+    "duration": 4.21
+
+}
+
+\`\`\`
+
+**## Must Not Observe**
 
 The Terminal Provider must not:
 
-- Interpret Git commands.
-- Generate Git observations.
-- Generate filesystem observations.
-- Infer developer intent.
+\- Interpret Git commands.
 
-## Test Requirement
+\- Generate Git observations.
+
+\- Generate filesystem observations.
+
+\- Infer developer intent.
+
+**## Test Requirement**
 
 Given:
 
-```text
+\`\`\`text
+
 pytest tests/
-```
+
+\`\`\`
 
 with exit code:
 
-```text
+\`\`\`text
+
 0
-```
+
+\`\`\`
 
 the provider must produce one:
 
-```text
+\`\`\`text
+
 command.completed
-```
+
+\`\`\`
 
 observation containing:
 
-```text
-exit_code = 0
-```
+\`\`\`text
 
----
+exit\_code = 0
 
-# 19. Filesystem Provider
+\`\`\`
+
+**---**
+
+**# 19. Filesystem Provider**
 
 The Filesystem Provider owns meaningful file changes within the monitored workspace.
 
-## 19.1 Filesystem Responsibilities
+**## 19.1 Filesystem Responsibilities**
 
 The Filesystem Provider is responsible for:
 
-- Monitoring configured workspace paths.
-- Detecting file creation.
-- Detecting file modification.
-- Detecting file deletion.
-- Filtering irrelevant filesystem activity.
-- Publishing filesystem observations.
+\- Monitoring configured workspace paths.
+
+\- Detecting file creation.
+
+\- Detecting file modification.
+
+\- Detecting file deletion.
+
+\- Filtering irrelevant filesystem activity.
+
+\- Publishing filesystem observations.
 
 The Filesystem Provider is not responsible for:
 
-- Git semantics.
-- Git commits.
-- Terminal commands.
-- Editor focus.
-- Developer intent.
+\- Git semantics.
 
----
+\- Git commits.
 
-# 20. Filesystem Observation Catalog
+\- Terminal commands.
+
+\- Editor focus.
+
+\- Developer intent.
+
+**---**
+
+**# 20. Filesystem Observation Catalog**
 
 The initial Filesystem Provider contains exactly:
 
-```text
+\`\`\`text
+
 file.created
+
 file.modified
+
 file.deleted
-```
 
----
+\`\`\`
 
-# 21. `file.created`
+**---**
 
-## Owner
+**# 21. \`file.created\`**
+
+**## Owner**
 
 Filesystem Provider
 
-## Trigger
+**## Trigger**
 
 A monitored workspace file is created.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
+
 path
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 filesystem
 
-observation_type:
+observation\_type:
+
 file.created
 
 metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "path": "/home/jyotish/dev/aegisflow/backend/new_module.py"
-}
-```
 
-## Must Not Observe
+{
+
+    "workspace": "/home/jyotish/dev/aegisflow",
+
+    "path": "/home/jyotish/dev/aegisflow/backend/new\_module.py"
+
+}
+
+\`\`\`
+
+**## Must Not Observe**
 
 The provider must not report unrelated files outside the monitored workspace.
 
 Temporary editor files should not automatically become developer-workflow observations unless explicitly included by the prototype.
 
----
+**---**
 
-# 22. `file.modified`
+**# 22. \`file.modified\`**
 
-## Owner
+**## Owner**
 
 Filesystem Provider
 
-## Trigger
+**## Trigger**
 
 A monitored workspace file undergoes a meaningful modification.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
+
 path
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 filesystem
 
-observation_type:
+observation\_type:
+
 file.modified
 
 metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "path": "/home/jyotish/dev/aegisflow/backend/observation/core/provider.py"
-}
-```
 
-## Must Not Observe
+{
+
+    "workspace": "/home/jyotish/dev/aegisflow",
+
+    "path": "/home/jyotish/dev/aegisflow/backend/observation/core/provider.py"
+
+}
+
+\`\`\`
+
+**## Must Not Observe**
 
 The provider must not expose:
 
-- Individual keystrokes.
-- Cursor movement.
-- Screen changes.
-- Editor rendering.
-- Every low-level filesystem notification.
+\- Individual keystrokes.
+
+\- Cursor movement.
+
+\- Screen changes.
+
+\- Editor rendering.
+
+\- Every low-level filesystem notification.
 
 Multiple low-level filesystem notifications representing one logical modification should not automatically become multiple logical observations.
 
-## Test Requirement
+**## Test Requirement**
 
 Modify and save:
 
-```text
+\`\`\`text
+
 backend/observation/core/provider.py
-```
+
+\`\`\`
 
 Expected:
 
-```text
+\`\`\`text
+
 file.modified
-```
+
+\`\`\`
 
 with the correct workspace and path.
 
----
+**---**
 
-# 23. `file.deleted`
+**# 23. \`file.deleted\`**
 
-## Owner
+**## Owner**
 
 Filesystem Provider
 
-## Trigger
+**## Trigger**
 
 A monitored workspace file is deleted.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
+
 path
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 filesystem
 
-observation_type:
+observation\_type:
+
 file.deleted
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow",
+
     "path": "/home/jyotish/dev/aegisflow/backend/example.py"
+
 }
-```
 
----
+\`\`\`
 
-# 24. VS Code Provider
+**---**
+
+**# 24. VS Code Provider**
 
 The VS Code Provider owns editor and workspace context.
 
 The provider is intended to represent editor context rather than monitor source-code contents.
 
-## 24.1 VS Code Responsibilities
+**## 24.1 VS Code Responsibilities**
 
 The VS Code Provider is responsible for:
 
-- Workspace opening.
-- Workspace closing.
-- Active file changes.
-- Publishing editor-context observations.
+\- Workspace opening.
+
+\- Workspace closing.
+
+\- Active file changes.
+
+\- Publishing editor-context observations.
 
 The VS Code Provider is not responsible for:
 
-- File modifications.
-- Git commits.
-- Terminal commands.
-- Keystroke tracking.
-- Screen recording.
-- Cursor tracking.
-- Code-content interpretation.
+\- File modifications.
 
----
+\- Git commits.
 
-# 25. VS Code Observation Catalog
+\- Terminal commands.
+
+\- Keystroke tracking.
+
+\- Screen recording.
+
+\- Cursor tracking.
+
+\- Code-content interpretation.
+
+**---**
+
+**# 25. VS Code Observation Catalog**
 
 The initial VS Code Provider contains exactly:
 
-```text
+\`\`\`text
+
 workspace.opened
+
 file.focused
+
 workspace.closed
-```
 
----
+\`\`\`
 
-# 26. `workspace.opened`
+**---**
 
-## Owner
+**# 26. \`workspace.opened\`**
+
+**## Owner**
 
 VS Code Provider
 
-## Trigger
+**## Trigger**
 
 A monitored workspace is opened in VS Code.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 vscode
 
-observation_type:
+observation\_type:
+
 workspace.opened
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow"
+
 }
-```
 
----
+\`\`\`
 
-# 27. `file.focused`
+**---**
 
-## Owner
+**# 27. \`file.focused\`**
+
+**## Owner**
 
 VS Code Provider
 
-## Trigger
+**## Trigger**
 
 The active editor file changes.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
+
 path
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 vscode
 
-observation_type:
+observation\_type:
+
 file.focused
 
 metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "path": "/home/jyotish/dev/aegisflow/backend/observation/core/provider.py"
-}
-```
 
-## Must Not Observe
+{
+
+    "workspace": "/home/jyotish/dev/aegisflow",
+
+    "path": "/home/jyotish/dev/aegisflow/backend/observation/core/provider.py"
+
+}
+
+\`\`\`
+
+**## Must Not Observe**
 
 The provider must not observe:
 
-- Individual keystrokes.
-- Cursor movement.
-- Scroll position.
-- Screen contents.
-- Every editor repaint.
-- Code semantics.
+\- Individual keystrokes.
 
-## Test Requirement
+\- Cursor movement.
+
+\- Scroll position.
+
+\- Screen contents.
+
+\- Every editor repaint.
+
+\- Code semantics.
+
+**## Test Requirement**
 
 Given:
 
-```text
+\`\`\`text
+
 file A
-```
+
+\`\`\`
 
 becomes:
 
-```text
+\`\`\`text
+
 file B
-```
+
+\`\`\`
 
 the provider produces one:
 
-```text
+\`\`\`text
+
 file.focused
-```
+
+\`\`\`
 
 observation for file B.
 
----
+**---**
 
-# 28. `workspace.closed`
+**# 28. \`workspace.closed\`**
 
-## Owner
+**## Owner**
 
 VS Code Provider
 
-## Trigger
+**## Trigger**
 
 The monitored workspace is closed.
 
-## Required Metadata
+**## Required Metadata**
 
-```text
+\`\`\`text
+
 workspace
-```
 
-## Example
+\`\`\`
 
-```text
+**## Example**
+
+\`\`\`text
+
 provider:
+
 vscode
 
-observation_type:
+observation\_type:
+
 workspace.closed
 
 metadata:
+
 {
+
     "workspace": "/home/jyotish/dev/aegisflow"
+
 }
-```
 
----
+\`\`\`
 
-# 29. Complete Observation Catalog
+**---**
 
-The complete minimal prototype therefore contains exactly:
+**# 29. Complete Observation Catalog**
+
+The complete minimal prototype remains:
 
 ```text
+
 GIT
+
 ├── repository.detected
+
 ├── branch.changed
+
 ├── working_tree.changed
-└── commit.created
+
+└── commit.changed
 
 TERMINAL
+
 ├── command.started
+
 └── command.completed
 
 FILESYSTEM
+
 ├── file.created
+
 ├── file.modified
+
 └── file.deleted
 
 VS CODE
+
 ├── workspace.opened
+
 ├── file.focused
+
 └── workspace.closed
+
 ```
 
 Total:
 
 ```text
+
 13 observation types
+
 ```
 
-This catalog is the initial scope boundary.
+The four Git observations are implemented and verified.
 
----
+The Terminal, Filesystem, and VS Code observations remain part of the planned prototype scope and are not claimed as implemented by this milestone.
 
-# 30. Observation Ownership Matrix
+
+**# 30. Observation Ownership Matrix**
 
 | Observation Type | Owner | Core Meaning |
 |---|---|---|
 | `repository.detected` | Git | Local repository identified |
 | `branch.changed` | Git | Active branch changed |
 | `working_tree.changed` | Git | Git working-tree state changed |
-| `commit.created` | Git | Local commit created |
+| `commit.changed` | Git | Observed local commit state changed |
 | `command.started` | Terminal | Command execution started |
 | `command.completed` | Terminal | Command execution completed |
 | `file.created` | Filesystem | Workspace file created |
@@ -1328,39 +1869,50 @@ This catalog is the initial scope boundary.
 
 No observation type may have multiple owners in the first prototype.
 
----
+The Git Provider is the first provider whose complete observation contract has been implemented and verified.
 
-# 31. Observation Metadata Rules
+
+**# 31. Observation Metadata Rules**
 
 Every observation must contain the common Observation fields defined by the Observation Foundation:
 
-```text
+\`\`\`text
+
 id
+
 provider
-observation_type
-occurred_at
+
+observation\_type
+
+occurred\_at
+
 metadata
-```
+
+\`\`\`
 
 Provider-specific metadata belongs inside:
 
-```text
+\`\`\`text
+
 metadata
-```
+
+\`\`\`
 
 Common workspace correlation data should be included wherever available.
 
 The minimum common correlation field is:
 
-```text
+\`\`\`text
+
 workspace
-```
+
+\`\`\`
 
 Additional provider-specific fields are allowed only when defined by the observation contract.
 
----
+**---**
 
-# 32. Observation Immutability
+**# 32. Observation Immutability**
 
 Once an Observation is produced, its meaning must not be changed by downstream components.
 
@@ -1368,23 +1920,29 @@ The Observation represents what the provider observed.
 
 For example:
 
-```text
+\`\`\`text
+
 Git Provider
+
     ↓
+
 commit.created
-```
+
+\`\`\`
 
 must remain:
 
-```text
+\`\`\`text
+
 commit.created
-```
+
+\`\`\`
 
 A future interpretation layer may derive meaning from it, but it must not rewrite the original observation.
 
----
+**---**
 
-# 33. Provider Independence
+**# 33. Provider Independence**
 
 Providers communicate through the Observation Foundation.
 
@@ -1392,91 +1950,135 @@ They do not directly call one another.
 
 Correct:
 
-```text
+\`\`\`text
+
 Git Provider
+
      │
+
      ▼
+
 Observation Publisher
+
      │
+
      ▼
+
 Observation Bus
-```
+
+\`\`\`
 
 Incorrect:
 
-```text
+\`\`\`text
+
 Git Provider
+
      │
+
      ▼
+
 Terminal Provider
-```
+
+\`\`\`
 
 Incorrect:
 
-```text
+\`\`\`text
+
 Filesystem Provider
+
      │
+
      ▼
+
 Git Provider
-```
+
+\`\`\`
 
 Each provider remains independently testable and replaceable.
 
----
+**---**
 
-# 34. No Central Provider-Specific Manager
+**# 34. No Central Provider-Specific Manager**
 
 AegisFlow will not introduce one large manager containing logic for:
 
-```text
+\`\`\`text
+
 Git
+
 Terminal
+
 Filesystem
+
 VS Code
-```
+
+\`\`\`
 
 Instead:
 
-```text
+\`\`\`text
+
 Provider Registry
+
         │
+
         ├── Git Provider
+
         ├── Terminal Provider
+
         ├── Filesystem Provider
+
         └── VS Code Provider
-```
+
+\`\`\`
 
 Each provider owns its own domain.
 
 Shared provider lifecycle remains the responsibility of the Observation Foundation.
 
----
+**---**
 
-# 35. Provider Lifecycle
+**# 35. Provider Lifecycle**
 
 Every provider follows the existing Observation Provider contract:
 
-```text
+\`\`\`text
+
 initialize()
+
     │
+
     ▼
+
 start()
+
     │
+
     ▼
+
 observe()
+
     │
+
     ▼
+
 Observation
+
     │
+
     ▼
+
 stop()
-```
+
+\`\`\`
 
 Provider-specific implementations must not change this contract.
 
----
+**---**
 
-# 36. Provider Detection Strategy
+**# 36. Provider Detection Strategy**
 
 The first prototype is local-first.
 
@@ -1486,659 +2088,782 @@ The exact implementation mechanism must produce the observation contracts define
 
 Examples:
 
-```text
+\`\`\`text
+
 Git
+
     ↓
+
 Local repository state
 
 Terminal
+
     ↓
+
 Executed command lifecycle
 
 Filesystem
+
     ↓
+
 Workspace filesystem changes
 
 VS Code
+
     ↓
+
 Editor workspace/activity signals
-```
+
+\`\`\`
 
 The mechanism is subordinate to the observation contract.
 
 A different internal implementation may be used later as long as the externally observable behavior remains compatible with this ADR.
 
----
+**---**
 
-# 37. Observation Frequency Rules
+**# 37. Observation Frequency Rules**
 
 The prototype must represent meaningful logical activity rather than raw low-level signals.
 
-Examples:
+For the implemented Git Provider:
 
 ```text
+
+One repository discovery
+
+    ↓
+
+One repository.detected
+
+```
+
+```text
+
 One branch transition
+
     ↓
+
 One branch.changed
+
 ```
 
 ```text
-One local commit
+
+clean → dirty
+
     ↓
-One commit.created
+
+One working_tree.changed
+
 ```
 
 ```text
+
+dirty → clean
+
+    ↓
+
+One working_tree.changed
+
+```
+
+```text
+
+One new local commit
+
+    ↓
+
+One commit.changed
+
+```
+
+A repeated observation cycle while the state remains unchanged must not generate duplicate Git observations.
+
+For the planned providers, the same principle remains the intended contract:
+
+```text
+
 One command execution
+
     ↓
+
 One command.started
+
     ↓
+
 One command.completed
+
 ```
 
 ```text
+
 One logical file modification
+
     ↓
+
 One file.modified
+
 ```
 
 ```text
+
 One active-file transition
+
     ↓
+
 One file.focused
+
 ```
 
 Providers must avoid generating repeated observations from the same unchanged state.
 
----
 
-# 38. Negative Observation Rules
+**# 38. Negative Observation Rules**
 
 Providers must also prove that they do not observe unrelated activity.
 
-Examples:
+For the implemented Git Provider:
 
 ```text
+
 git status
+
 ```
 
 must not create:
 
 ```text
+
 branch.changed
-commit.created
+
+commit.changed
+
 ```
+
+```text
+
+git log
+
+```
+
+must not create:
+
+```text
+
+commit.changed
+
+```
+
+```text
+
+git diff
+
+```
+
+must not create:
+
+```text
+
+commit.changed
+
+```
+
+The Git Provider represents Git state transitions, not Git command execution.
+
+For planned providers, the corresponding negative cases remain part of their future verification requirements.
 
 Typing an unexecuted terminal command must not create:
 
 ```text
+
 command.started
+
 ```
 
 Cursor movement must not create:
 
 ```text
+
 file.focused
+
 ```
 
 A filesystem event outside the monitored workspace must not create:
 
 ```text
+
 file.modified
+
 ```
 
-Viewing Git history must not create:
 
-```text
-commit.created
-```
-
-These negative cases are part of provider verification.
-
----
-
-# 39. Individual Provider Test Contract
+**# 39. Individual Provider Test Contract**
 
 Every provider must have tests covering four categories.
 
-## 39.1 Positive Tests
+**## 39.1 Positive Tests**
 
 Verify that the provider produces the expected observation when its defined trigger occurs.
 
-## 39.2 Metadata Tests
+**## 39.2 Metadata Tests**
 
 Verify that required metadata is present and correct.
 
-## 39.3 Negative Tests
+**## 39.3 Negative Tests**
 
 Verify that unrelated activity does not produce the observation.
 
-## 39.4 Lifecycle Tests
+**## 39.4 Lifecycle Tests**
 
 Verify:
 
 ```text
+
 initialize()
+
 start()
+
 observe()
+
 stop()
+
 ```
 
 and correct provider state transitions.
 
----
+The completed Git Provider additionally has end-to-end lifecycle verification covering repository detection, duplicate suppression, branch change, working-tree transitions, commit change, and provider shutdown.
 
-# 40. Git Provider Test Contract
+
+**# 40. Git Provider Test Contract**
 
 The Git Provider must prove:
 
 ```text
+
 repository.detected
+
 branch.changed
+
 working_tree.changed
-commit.created
-```
 
-It must also prove that:
+commit.changed
 
-```text
-git status
-git log
-git diff
-```
-
-do not create unrelated Git observations.
-
----
-
-# 41. Terminal Provider Test Contract
-
-The Terminal Provider must prove:
-
-```text
-command.started
-command.completed
-```
-
-It must also prove that:
-
-- Unexecuted command text is ignored.
-- Command completion contains the correct exit code.
-- Working directory is captured.
-- Command execution produces the expected lifecycle.
-
----
-
-# 42. Filesystem Provider Test Contract
-
-The Filesystem Provider must prove:
-
-```text
-file.created
-file.modified
-file.deleted
 ```
 
 It must also prove:
 
-- Workspace filtering.
-- Irrelevant filesystem activity filtering.
-- No keystroke-level observations.
-- No duplicate logical observations from one change.
+- Provider does not observe before `start()`.
+- Repository detection is emitted once.
+- Repeated observation cycles do not duplicate unchanged state.
+- Branch changes are detected.
+- Dirty working-tree state is detected.
+- Clean working-tree state after a commit is detected.
+- Local commit changes are detected.
+- Commit SHA and commit message metadata are correct.
+- Provider produces no observations after `stop()`.
 
----
+The completed implementation has been verified through the Git provider test suite and a dedicated end-to-end lifecycle test.
 
-# 43. VS Code Provider Test Contract
 
-The VS Code Provider must prove:
+**# 41. Terminal Provider Test Contract**
 
-```text
-workspace.opened
-file.focused
-workspace.closed
-```
+The Terminal Provider must prove:
+
+\`\`\`text
+
+command.started
+
+command.completed
+
+\`\`\`
 
 It must also prove that:
 
-- Active-file changes are detected.
-- Workspace identity is correct.
-- Cursor movement does not generate observations.
-- Keystrokes do not generate observations.
-- Editor rendering does not generate observations.
+\- Unexecuted command text is ignored.
 
----
+\- Command completion contains the correct exit code.
 
-# 44. Golden Developer Workflow
+\- Working directory is captured.
+
+\- Command execution produces the expected lifecycle.
+
+**---**
+
+**# 42. Filesystem Provider Test Contract**
+
+The Filesystem Provider must prove:
+
+\`\`\`text
+
+file.created
+
+file.modified
+
+file.deleted
+
+\`\`\`
+
+It must also prove:
+
+\- Workspace filtering.
+
+\- Irrelevant filesystem activity filtering.
+
+\- No keystroke-level observations.
+
+\- No duplicate logical observations from one change.
+
+**---**
+
+**# 43. VS Code Provider Test Contract**
+
+The VS Code Provider must prove:
+
+\`\`\`text
+
+workspace.opened
+
+file.focused
+
+workspace.closed
+
+\`\`\`
+
+It must also prove that:
+
+\- Active-file changes are detected.
+
+\- Workspace identity is correct.
+
+\- Cursor movement does not generate observations.
+
+\- Keystrokes do not generate observations.
+
+\- Editor rendering does not generate observations.
+
+**---**
+
+**# 44. Golden Developer Workflow**
 
 The first prototype uses one reference developer workflow.
 
 ```text
+
 1. Open AegisFlow workspace in VS Code.
+
 2. Open provider.py.
+
 3. Modify provider.py.
+
 4. Save provider.py.
+
 5. Run pytest tests/.
+
 6. Switch Git branch.
+
 7. Modify another file.
+
 8. Create a local Git commit.
+
 9. Close the workspace.
+
 ```
 
-The expected observations are:
+The intended observations are:
 
 ```text
+
 workspace.opened
+
         │
+
         ▼
+
 file.focused
+
         │
+
         ▼
+
 file.modified
+
         │
+
         ▼
+
 command.started
+
         │
+
         ▼
+
 command.completed
+
         │
+
         ▼
+
 branch.changed
+
         │
+
         ▼
+
 file.modified
+
         │
+
         ▼
+
 working_tree.changed
+
         │
+
         ▼
-commit.created
+
+commit.changed
+
         │
+
         ▼
+
 workspace.closed
+
 ```
 
 The exact chronological ordering between independent providers may vary slightly because observations originate from different local sources.
 
-The important requirement is that every expected workflow signal is represented by the correct provider-owned observation.
-
----
-
-# 45. Low-Level End-to-End Demo
-
-The following demonstrates how one developer action becomes an Observation.
-
-## Step 1 — Developer opens workspace
-
-Developer opens:
+For the completed Git Provider, the verified sequence is specifically:
 
 ```text
-/home/jyotish/dev/aegisflow
-```
 
-VS Code Provider produces:
+repository.detected
 
-```text
-provider:
-vscode
+        ↓
 
-observation_type:
-workspace.opened
-
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow"
-}
-```
-
----
-
-## Step 2 — Developer focuses a file
-
-Developer opens:
-
-```text
-backend/observation/core/provider.py
-```
-
-VS Code Provider produces:
-
-```text
-provider:
-vscode
-
-observation_type:
-file.focused
-
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "path": "/home/jyotish/dev/aegisflow/backend/observation/core/provider.py"
-}
-```
-
----
-
-## Step 3 — Developer modifies the file
-
-The file is modified and saved.
-
-Filesystem Provider produces:
-
-```text
-provider:
-filesystem
-
-observation_type:
-file.modified
-
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "path": "/home/jyotish/dev/aegisflow/backend/observation/core/provider.py"
-}
-```
-
----
-
-## Step 4 — Developer runs tests
-
-Developer executes:
-
-```text
-pytest tests/
-```
-
-Terminal Provider produces:
-
-```text
-provider:
-terminal
-
-observation_type:
-command.started
-
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "cwd": "/home/jyotish/dev/aegisflow",
-    "command": "pytest tests/"
-}
-```
-
-After the command exits:
-
-```text
-provider:
-terminal
-
-observation_type:
-command.completed
-
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "cwd": "/home/jyotish/dev/aegisflow",
-    "command": "pytest tests/",
-    "exit_code": 0,
-    "duration": 4.21
-}
-```
-
----
-
-## Step 5 — Developer switches branch
-
-Developer switches:
-
-```text
-main
-```
-
-to:
-
-```text
-feature/git-provider
-```
-
-Git Provider produces:
-
-```text
-provider:
-git
-
-observation_type:
 branch.changed
 
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "repository": "/home/jyotish/dev/aegisflow",
-    "previous_branch": "main",
-    "current_branch": "feature/git-provider"
-}
+        ↓
+
+working_tree.changed (dirty)
+
+        ↓
+
+working_tree.changed (clean)
+
+        ↓
+
+commit.changed
+
 ```
 
----
+The important requirement is that every workflow signal is represented by the correct provider-owned observation.
 
-## Step 6 — Developer modifies another file
 
-Filesystem Provider produces:
+**# 45. Low-Level End-to-End Demo**
+
+The completed Git Provider has a dedicated end-to-end workflow test.
+
+**## Step 1 — Create a local repository**
+
+A temporary Git repository is initialized and configured for testing.
+
+**## Step 2 — Create the initial commit**
+
+An initial file is committed so the provider starts from a known clean repository state.
+
+**## Step 3 — Initialize and start the provider**
+
+The provider is initialized and started.
+
+Before `start()`, no observations are produced.
+
+**## Step 4 — Detect the repository**
+
+The provider produces:
 
 ```text
+
 provider:
-filesystem
 
-observation_type:
-file.modified
-
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "path": "/home/jyotish/dev/aegisflow/backend/observation/docs/ADR-002-minimal-developer-workflow.md"
-}
-```
-
----
-
-## Step 7 — Git working tree becomes dirty
-
-Git Provider detects:
-
-```text
-clean
-  ↓
-dirty
-```
-
-and produces:
-
-```text
-provider:
 git
 
 observation_type:
+
+repository.detected
+
+```
+
+**## Step 5 — Verify duplicate suppression**
+
+The next observation cycle produces no duplicate repository detection.
+
+**## Step 6 — Change branch**
+
+The test switches to:
+
+```text
+
+feature/e2e-test
+
+```
+
+The provider produces:
+
+```text
+
+branch.changed
+
+```
+
+with the new branch name.
+
+**## Step 7 — Modify a tracked file**
+
+The working tree transitions from clean to dirty.
+
+The provider produces:
+
+```text
+
 working_tree.changed
 
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "repository": "/home/jyotish/dev/aegisflow",
-    "status": "dirty"
-}
 ```
 
----
-
-## Step 8 — Developer creates a local commit
-
-Developer executes:
+with:
 
 ```text
-git add .
-git commit -m "define observation workflow"
+
+working_tree_clean: False
+
 ```
 
-The Git Provider detects the new local HEAD and produces:
+**## Step 8 — Create a local commit**
+
+The modified file is committed.
+
+The working tree transitions from dirty to clean, so the next observation cycle produces:
 
 ```text
-provider:
-git
 
-observation_type:
-commit.created
+working_tree.changed
 
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow",
-    "repository": "/home/jyotish/dev/aegisflow",
-    "commit_sha": "abc123...",
-    "branch": "feature/git-provider",
-    "message": "define observation workflow"
-}
 ```
 
-No GitHub push is required.
-
----
-
-## Step 9 — Developer closes workspace
-
-VS Code Provider produces:
+with:
 
 ```text
-provider:
-vscode
 
-observation_type:
-workspace.closed
+working_tree_clean: True
 
-metadata:
-{
-    "workspace": "/home/jyotish/dev/aegisflow"
-}
 ```
 
----
-
-# 46. Final Demo Result
-
-The resulting Observation stream represents:
+The following observation cycle detects the new HEAD and produces:
 
 ```text
-Developer
-    │
-    ▼
-Opened workspace
-    │
-    ▼
-Focused provider.py
-    │
-    ▼
-Modified provider.py
-    │
-    ▼
-Ran tests successfully
-    │
-    ▼
-Changed Git branch
-    │
-    ▼
-Modified another file
-    │
-    ▼
-Working tree became dirty
-    │
-    ▼
-Created local commit
-    │
-    ▼
-Closed workspace
+
+commit.changed
+
 ```
 
-The Observation Foundation receives these as independent observations:
+with:
 
 ```text
-vscode.workspace.opened
-vscode.file.focused
-filesystem.file.modified
-terminal.command.started
-terminal.command.completed
+
+commit
+
+commit_message
+
+```
+
+metadata.
+
+**## Step 9 — Stop the provider**
+
+After `stop()`, the provider produces no further observations.
+
+This end-to-end test verifies the complete implemented Git Provider lifecycle from repository detection through shutdown.
+
+
+**# 46. Final Demo Result**
+
+The completed Git Provider can represent the following local Git workflow:
+
+```text
+
+Repository discovered
+
+      ↓
+
+repository.detected
+
+      ↓
+
+Branch changes
+
+      ↓
+
+branch.changed
+
+      ↓
+
+File modification makes tree dirty
+
+      ↓
+
+working_tree.changed
+working_tree_clean = False
+
+      ↓
+
+Local commit created
+
+      ↓
+
+Working tree becomes clean
+
+      ↓
+
+working_tree.changed
+working_tree_clean = True
+
+      ↓
+
+New local HEAD observed
+
+      ↓
+
+commit.changed
+
+```
+
+The resulting observations are raw factual Git observations:
+
+```text
+
+git.repository.detected
+
 git.branch.changed
-filesystem.file.modified
+
 git.working_tree.changed
-git.commit.created
-vscode.workspace.closed
+
+git.working_tree.changed
+
+git.commit.changed
+
 ```
 
-These observations are the raw factual foundation for future:
+No interpretation is performed by the provider.
+
+These observations form the Git portion of the low-level observation trail from which AegisFlow can later construct:
 
 ```text
+
+Observations
+
+      ↓
+
 Timeline
-    ↓
+
+      ↓
+
 Interpretation
-    ↓
+
+      ↓
+
 Context
-    ↓
+
+      ↓
+
 Continuous Understanding
+
 ```
 
-No interpretation is performed by the providers.
 
----
-
-# 47. What the Prototype Does Not Attempt
+**# 47. What the Prototype Does Not Attempt**
 
 The first prototype explicitly does not include:
 
-- AI interpretation
-- LLM processing
-- Embeddings
-- Vector databases
-- Redis
-- Kafka
-- RabbitMQ
-- Distributed event streaming
-- GitHub monitoring
-- Pull request monitoring
-- Screen recording
-- Screenshot capture
-- Keystroke recording
-- Cursor tracking
-- Productivity scoring
-- Automatic task inference
-- Developer intent inference
-- Sentiment analysis
-- Code semantic analysis
-- Business event generation
-- Context Engine implementation
+\- AI interpretation
+
+\- LLM processing
+
+\- Embeddings
+
+\- Vector databases
+
+\- Redis
+
+\- Kafka
+
+\- RabbitMQ
+
+\- Distributed event streaming
+
+\- GitHub monitoring
+
+\- Pull request monitoring
+
+\- Screen recording
+
+\- Screenshot capture
+
+\- Keystroke recording
+
+\- Cursor tracking
+
+\- Productivity scoring
+
+\- Automatic task inference
+
+\- Developer intent inference
+
+\- Sentiment analysis
+
+\- Code semantic analysis
+
+\- Business event generation
+
+\- Context Engine implementation
 
 The prototype only establishes objective workspace observations.
 
----
+**---**
 
-# 48. Provider Implementation Boundary
+**# 48. Provider Implementation Boundary**
 
 Once a provider is implemented according to this ADR, new observations must not be added casually.
 
 For example, the Git Provider must not suddenly introduce:
 
-```text
+\`\`\`text
+
 git.status.executed
+
 git.log.executed
+
 git.diff.executed
+
 git.push.executed
-```
+
+\`\`\`
 
 unless the prototype is explicitly revised.
 
 Likewise, the Terminal Provider must not begin interpreting:
 
-```text
+\`\`\`text
+
 git commit
+
 pytest
+
 npm install
+
 docker compose
-```
+
+\`\`\`
 
 as Git, test, package, or Docker business events.
 
@@ -2146,83 +2871,140 @@ Those commands remain terminal observations.
 
 Interpretation belongs to a later layer.
 
----
+**---**
 
-# 49. Implementation Order
+**# 49. Implementation Order**
 
-The providers will be implemented in this order:
+The broader prototype remains planned in this order:
 
 ```text
+
 Step 6.1
+
 Low-Level Prototype
+
         │
+
         ▼
+
 Step 6.2
+
 Git Provider
+
         │
+
         ▼
+
 Step 6.3
+
 Terminal Provider
+
         │
+
         ▼
+
 Step 6.4
+
 Filesystem Provider
+
         │
+
         ▼
+
 Step 6.5
+
 VS Code Provider
+
         │
+
         ▼
+
 Step 6.6
+
 Multi-Provider Integration
+
         │
+
         ▼
+
 Step 6.7
+
 Golden Workflow Verification
+
 ```
 
-Each provider must remain within the responsibilities defined by this ADR.
+**Current status:**
 
----
+```text
 
-# 50. Definition of Done
+Git Provider
 
-The first Observation Provider milestone is considered complete when:
+    ↓
 
-- All prototype providers are implemented.
-- Every observation in the catalog has an owner.
-- Every observation has a defined trigger.
-- Every observation has defined required metadata.
-- Every provider has positive tests.
-- Every provider has negative tests.
-- Every provider has lifecycle tests.
-- Provider observations are delivered through the Observation Publisher.
-- Subscribers receive complete `Observation` objects.
-- Independent providers can operate without direct dependencies.
-- The Golden Developer Workflow produces the expected observation set.
-- No provider introduces observations outside the locked prototype scope.
-- The resulting observations can be consumed by future Timeline and Interpretation components.
+IMPLEMENTED + TESTED + END-TO-END VERIFIED
 
----
+```
 
-# 51. Decision Consequences
+Terminal, Filesystem, and VS Code providers remain future implementation work.
 
-## Positive
+The Git Provider milestone is therefore complete without claiming completion of the remaining providers.
+
+
+**# 50. Definition of Done**
+
+**## Git Provider milestone**
+
+The Git Provider milestone is considered complete when:
+
+- The Git Provider is implemented according to this ADR.
+- Every Git observation in the locked Git catalog has an owner.
+- Every Git observation has a defined trigger.
+- Every Git observation has defined required metadata.
+- Positive Git tests pass.
+- Negative Git tests pass.
+- Git lifecycle tests pass.
+- Repository detection is verified.
+- Branch change detection is verified.
+- Working-tree dirty and clean transitions are verified.
+- Local commit change detection is verified.
+- Provider shutdown is verified.
+- The end-to-end Git Provider workflow passes.
+- No Git observation outside the locked Git scope is introduced.
+
+**## Broader Observation prototype**
+
+The broader prototype remains incomplete until the Terminal, Filesystem, and VS Code providers are implemented and the multi-provider Golden Workflow is verified.
+
+This ADR therefore distinguishes the completed Git Provider milestone from the future provider milestones.
+
+
+**# 51. Decision Consequences**
+
+**## Positive**
 
 This design provides:
 
-- Clear provider ownership.
-- Predictable implementation scope.
-- Deterministic provider testing.
-- Reduced provider overlap.
-- Reduced unnecessary observations.
-- Independent provider development.
-- Easier debugging.
-- Easier future provider replacement.
-- A known target for the Observation milestone.
-- A stable foundation for Timeline and Context development.
+\- Clear provider ownership.
 
-## Negative
+\- Predictable implementation scope.
+
+\- Deterministic provider testing.
+
+\- Reduced provider overlap.
+
+\- Reduced unnecessary observations.
+
+\- Independent provider development.
+
+\- Easier debugging.
+
+\- Easier future provider replacement.
+
+\- A known target for the Observation milestone.
+
+\- A stable foundation for Timeline and Context development.
+
+**## Negative**
 
 This approach requires more planning before implementation.
 
@@ -2234,9 +3016,9 @@ Some potentially useful observations will intentionally remain outside the first
 
 This tradeoff is accepted because architectural stability is more important than maximizing the number of observations during the first milestone.
 
----
+**---**
 
-# 52. Future Evolution
+**# 52. Future Evolution**
 
 This ADR defines only the first minimal Observation prototype.
 
@@ -2244,50 +3026,87 @@ Future providers and observation types may be added later.
 
 Examples may include:
 
-```text
+\`\`\`text
+
 Docker Provider
+
 Browser Provider
+
 IDE Provider
+
 CI Provider
+
 Database Provider
+
 Cloud Provider
-```
+
+\`\`\`
 
 However, future providers must follow the same principle:
 
-```text
+\`\`\`text
+
 Provider
+
     │
+
     ▼
+
 Owns one observation domain
+
     │
+
     ▼
+
 Produces complete Observation objects
+
     │
+
     ▼
+
 Publishes through Observation Foundation
-```
+
+\`\`\`
 
 Future additions must not compromise provider independence.
 
----
+**---**
 
-# 53. Final Architectural Decision
+**# 53. Final Architectural Decision**
 
 AegisFlow will build the Observation Foundation around a **small, explicitly defined, provider-owned observation catalog**.
 
-The first prototype will consist of:
+The first prototype consists of:
 
 ```text
+
 Git Provider
+
 Terminal Provider
+
 Filesystem Provider
+
 VS Code Provider
+
 ```
 
 Each provider has an explicitly defined responsibility.
 
-Each observation has:
+For the completed Git Provider, the locked observation catalog is:
+
+```text
+
+repository.detected
+
+branch.changed
+
+working_tree.changed
+
+commit.changed
+
+```
+
+Each Git observation has:
 
 - An owner
 - A type
@@ -2297,105 +3116,142 @@ Each observation has:
 - Exclusions
 - Positive tests
 - Negative tests
+- Lifecycle verification
 
-The prototype is the implementation contract.
+The Git Provider implementation has been completed and verified against this contract.
 
-Provider implementation must follow the prototype rather than redefining it during development.
+The remaining providers will be implemented according to the same contract-driven approach.
 
-The first implementation will therefore begin with the Git Provider only after this ADR has been accepted and committed.
+The prototype remains the implementation contract. Provider implementation must follow the prototype rather than redefining it during development.
 
----
 
-# 54. Implementation Rule
+**# 54. Implementation Rule**
 
 The following rule is mandatory for the first Observation Provider milestone:
 
-> **No provider may implement an observation that is not defined in this ADR.**
+\> **\*\*No provider may implement an observation that is not defined in this ADR.\*\***
 
 If implementation reveals a missing observation:
 
-```text
+\`\`\`text
+
 Missing Requirement
+
         │
+
         ▼
+
 Update ADR-002
+
         │
+
         ▼
+
 Review and Accept
+
         │
+
         ▼
+
 Implement
+
         │
+
         ▼
+
 Test
-```
+
+\`\`\`
 
 This keeps the Observation Foundation and its providers aligned with the intended AegisFlow architecture.
 
----
+**---**
 
-# 55. Final Result
+**# 55. Final Result**
 
-After implementation, the first Observation prototype must be able to transform a minimal real developer workflow:
+The first completed provider milestone transforms a minimal local Git workflow:
 
 ```text
-Open workspace
+
+Discover repository
+
       ↓
-Focus file
-      ↓
-Modify file
-      ↓
-Run command
-      ↓
+
 Switch branch
+
       ↓
-Modify file
+
+Modify tracked file
+
       ↓
-Create local commit
+
+Commit file change
+
       ↓
-Close workspace
+
+Stop provider
+
 ```
 
 into a structured observation stream:
 
 ```text
-vscode.workspace.opened
+
+repository.detected
+
         ↓
-vscode.file.focused
+
+branch.changed
+
         ↓
-filesystem.file.modified
+
+working_tree.changed
+working_tree_clean = False
+
         ↓
-terminal.command.started
+
+working_tree.changed
+working_tree_clean = True
+
         ↓
-terminal.command.completed
+
+commit.changed
+
         ↓
-git.branch.changed
-        ↓
-filesystem.file.modified
-        ↓
-git.working_tree.changed
-        ↓
-git.commit.created
-        ↓
-vscode.workspace.closed
+
+provider stopped
+(no further observations)
+
 ```
 
-Each observation is produced by the provider that owns that domain and is delivered through the common Observation Foundation.
+Each observation is produced by the Git Provider, which owns the Git domain, and follows the common Observation Foundation contract.
 
 The result is not yet "understanding."
 
-The result is a **complete, structured, objective observation trail** from which AegisFlow can later construct:
+The result is a **complete, structured, objective Git observation trail** from which AegisFlow can later construct:
 
 ```text
+
 Observations
+
       ↓
+
 Timeline
+
       ↓
+
 Interpretation
+
       ↓
+
 Context
+
       ↓
+
 Continuous Understanding
+
 ```
 
-This completes the low-level design contract for the first Observation Provider implementation phase.
+This completes the **Git Provider implementation phase** of the low-level Observation Provider milestone.
+
+The Terminal, Filesystem, and VS Code providers remain future phases of the broader prototype.
