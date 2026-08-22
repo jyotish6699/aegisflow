@@ -121,7 +121,11 @@ class GitProvider(ObservationProvider):
                 ),
             )
 
-            self._state = current_state
+            self._state = self._state.model_copy(
+                update={
+                    "branch": current_state.branch,
+                }
+            )
 
             yield observation
             return
@@ -140,7 +144,11 @@ class GitProvider(ObservationProvider):
                 ),
             )
 
-            self._state = current_state
+            self._state = self._state.model_copy(
+                update={
+                    "working_tree_clean": current_state.working_tree_clean,
+                }
+            )
 
             yield observation
             return
