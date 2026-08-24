@@ -1,0 +1,71 @@
+import json
+import subprocess
+from pathlib import Path
+
+
+def test_bash_emits_command_lifecycle_for_successful_command(
+    tmp_path: Path,
+) -> None:
+    """
+    A successfully executed Bash command should produce exactly
+    one command.started message and exactly one command.completed
+    message.
+    """
+
+    integration = (
+        Path(__file__).parents[4]
+        / "observation"
+        / "providers"
+        / "terminal"
+        / "bash"
+        / "integration.sh"
+    )
+
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f"""
+            source "{integration}"
+
+            printf 'hello'
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    messages = [
+        json.loads(line)
+        for line in result.stderr.splitlines()
+        if line.strip()
+    ]
+
+    started = [
+        message
+        for message in messages
+        if message["type"] == "command.started"
+    ]
+
+    completed = [
+        message
+        for message in messages
+        if message["type"] == "command.completed"
+    ]
+
+    assert len(started) == 1
+    assert len(completed) == 1
+
+    assert started[0]["command"] == "printf 'hello'"
+    assert started[0]["cwd"] == str(tmp_path)
+
+    assert completed[0]["command"] == "printf 'hello'"
+    assert completed[0]["cwd"] == str(tmp_path)
+
+    assert started[0]["command_id"] == completed[0]["command_id"]
+
+    assert completed[0]["exit_code"] == 0
+
+    assert completed[0]["duration"] >= 0
