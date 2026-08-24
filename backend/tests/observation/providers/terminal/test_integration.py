@@ -69,3 +69,69 @@ def test_bash_emits_command_lifecycle_for_successful_command(
     assert completed[0]["exit_code"] == 0
 
     assert completed[0]["duration"] >= 0
+
+
+def test_bash_emits_command_lifecycle_for_failed_command(
+    tmp_path: Path,
+) -> None:
+    """
+    A failed Bash command should still produce exactly one
+    command.started message and exactly one command.completed
+    message containing the non-zero exit code.
+    """
+
+    integration = (
+        Path(__file__).parents[4]
+        / "observation"
+        / "providers"
+        / "terminal"
+        / "bash"
+        / "integration.sh"
+    )
+
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f"""
+            source "{integration}"
+
+            false
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+
+    messages = [
+        json.loads(line)
+        for line in result.stderr.splitlines()
+        if line.strip()
+    ]
+
+    started = [
+        message
+        for message in messages
+        if message["type"] == "command.started"
+    ]
+
+    completed = [
+        message
+        for message in messages
+        if message["type"] == "command.completed"
+    ]
+
+    assert len(started) == 1
+    assert len(completed) == 1
+
+    assert started[0]["command"] == "false"
+    assert completed[0]["command"] == "false"
+
+    assert started[0]["cwd"] == str(tmp_path)
+    assert completed[0]["cwd"] == str(tmp_path)
+
+    assert started[0]["command_id"] == completed[0]["command_id"]
+
+    assert completed[0]["exit_code"] != 0
+    assert completed[0]["duration"] >= 0
