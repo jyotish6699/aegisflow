@@ -73,6 +73,43 @@ def test_bash_emits_command_lifecycle_for_successful_command(
     assert completed[0]["duration"] >= 0
 
 
+def test_bash_preserves_command_stderr(
+    tmp_path: Path,
+) -> None:
+    """
+    A command's stderr output must remain unchanged while
+    the Bash integration continues to emit its lifecycle
+    observations.
+    """
+
+    integration = (
+        Path(__file__).parents[4]
+        / "observation"
+        / "providers"
+        / "terminal"
+        / "bash"
+        / "integration.sh"
+    )
+
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f"""
+            source "{integration}"
+
+            printf 'error output' >&2
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert "error output" in result.stderr
+
+
 def test_bash_emits_command_lifecycle_for_failed_command(
     tmp_path: Path,
 ) -> None:
