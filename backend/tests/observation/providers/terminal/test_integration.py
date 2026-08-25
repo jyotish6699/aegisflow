@@ -21,11 +21,15 @@ def test_bash_emits_command_lifecycle_for_successful_command(
         / "integration.sh"
     )
 
+    protocol = tmp_path / "aegisflow-protocol.jsonl"
+
     result = subprocess.run(
         [
             "bash",
             "-c",
             f"""
+            exec 3>"{protocol}"
+
             source "{integration}"
 
             printf 'hello'
@@ -39,7 +43,7 @@ def test_bash_emits_command_lifecycle_for_successful_command(
 
     messages = [
         json.loads(line)
-        for line in result.stderr.splitlines()
+        for line in protocol.read_text().splitlines()
         if line.strip()
     ]
 
@@ -110,6 +114,76 @@ def test_bash_preserves_command_stderr(
     assert "error output" in result.stderr
 
 
+def test_bash_observations_are_distinguishable_from_command_stderr(
+    tmp_path: Path,
+) -> None:
+    """
+    AegisFlow lifecycle observations must be distinguishable
+    from ordinary command stderr output.
+    """
+
+    integration = (
+        Path(__file__).parents[4]
+        / "observation"
+        / "providers"
+        / "terminal"
+        / "bash"
+        / "integration.sh"
+    )
+
+    protocol = tmp_path / "aegisflow-protocol.jsonl"
+
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            f"""
+            exec 3>"{protocol}"
+
+            source "{integration}"
+
+            printf 'error output' >&2
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    lines = [
+        line
+        for line in protocol.read_text().splitlines()
+        if line.strip()
+    ]
+
+    observation_lines = []
+
+    for line in lines:
+        try:
+            message = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        if message.get("type") in {
+            "command.started",
+            "command.completed",
+        }:
+            observation_lines.append(message)
+
+    assert len(observation_lines) == 2
+
+    assert {
+        message["type"]
+        for message in observation_lines
+    } == {
+        "command.started",
+        "command.completed",
+    }
+
+    assert "error output" in result.stderr
+
+
 def test_bash_emits_command_lifecycle_for_failed_command(
     tmp_path: Path,
 ) -> None:
@@ -128,15 +202,19 @@ def test_bash_emits_command_lifecycle_for_failed_command(
         / "integration.sh"
     )
 
+    protocol = tmp_path / "aegisflow-protocol.jsonl"
+
     result = subprocess.run(
         [
             "bash",
             "-c",
-            f"""
-            source "{integration}"
+        f"""
+        exec 3>"{protocol}"
 
-            false
-            """,
+        source "{integration}"
+
+        false
+        """,
         ],
         cwd=tmp_path,
         capture_output=True,
@@ -145,7 +223,7 @@ def test_bash_emits_command_lifecycle_for_failed_command(
 
     messages = [
         json.loads(line)
-        for line in result.stderr.splitlines()
+        for line in protocol.read_text().splitlines()
         if line.strip()
     ]
 

@@ -38,7 +38,7 @@ _aegisflow_emit_started() {
     python3 - \
         "$_aegisflow_command_id" \
         "$_aegisflow_command" \
-        "$_aegisflow_cwd" >&2 <<'PY'
+        "$_aegisflow_cwd" >&3 <<'PY'
 import json
 import sys
 
@@ -90,7 +90,7 @@ PY
         "$_aegisflow_command" \
         "$_aegisflow_cwd" \
         "$exit_code" \
-        "$duration" >&2 <<'PY'
+        "$duration" >&3 <<'PY'
 import json
 import sys
 
