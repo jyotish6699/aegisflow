@@ -43,6 +43,8 @@ def test_bash_emits_command_lifecycle_for_successful_command(
         if line.strip()
     ]
 
+    assert result.stdout == "hello"
+
     started = [
         message
         for message in messages
