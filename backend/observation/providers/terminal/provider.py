@@ -17,7 +17,8 @@ class TerminalProvider(ObservationProvider):
     them into canonical AegisFlow Observation objects.
     """
 
-    def __init__(self, protocol: Path) -> None:
+    def __init__(self, workspace: Path, protocol: Path) -> None:
+        self._workspace = workspace.resolve()
         self._protocol = protocol.resolve()
 
         self._started = False
@@ -81,6 +82,7 @@ class TerminalProvider(ObservationProvider):
                 metadata=ObservationMetadata(
                     source="terminal",
                     attributes={
+                        "workspace": str(self._workspace),
                         "command_id": message["command_id"],
                         "command": message["command"],
                         "cwd": message["cwd"],

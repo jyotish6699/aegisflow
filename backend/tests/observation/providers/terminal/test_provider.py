@@ -18,7 +18,7 @@ async def test_terminal_provider_has_correct_provider_type(
 
     protocol = tmp_path / "protocol.jsonl"
 
-    provider = TerminalProvider(protocol)
+    provider = TerminalProvider(tmp_path, protocol)
 
     assert provider.provider_type == ProviderType.TERMINAL
 
@@ -33,7 +33,7 @@ async def test_terminal_provider_does_not_observe_before_start(
 
     protocol = tmp_path / "protocol.jsonl"
 
-    provider = TerminalProvider(protocol)
+    provider = TerminalProvider(tmp_path, protocol)
 
     await provider.initialize()
 
@@ -56,7 +56,7 @@ async def test_terminal_provider_does_not_observe_when_protocol_is_missing(
 
     protocol = tmp_path / "protocol.jsonl"
 
-    provider = TerminalProvider(protocol)
+    provider = TerminalProvider(tmp_path, protocol)
 
     await provider.initialize()
     await provider.start()
@@ -79,7 +79,7 @@ async def test_terminal_provider_stops_observation(
 
     protocol = tmp_path / "protocol.jsonl"
 
-    provider = TerminalProvider(protocol)
+    provider = TerminalProvider(tmp_path, protocol)
 
     await provider.initialize()
     await provider.start()
@@ -111,7 +111,7 @@ async def test_terminal_provider_emits_command_started_observation(
         + "\n"
     )
 
-    provider = TerminalProvider(protocol)
+    provider = TerminalProvider(tmp_path, protocol)
 
     await provider.initialize()
     await provider.start()
@@ -131,6 +131,7 @@ async def test_terminal_provider_emits_command_started_observation(
     assert observation.metadata.source == "terminal"
 
     assert observation.metadata.attributes == {
+        "workspace": str(tmp_path),
         "command_id": "123-456",
         "command": "printf 'hello'",
         "cwd": str(tmp_path),
@@ -157,7 +158,7 @@ async def test_terminal_provider_emits_command_completed_observation(
         + "\n"
     )
 
-    provider = TerminalProvider(protocol)
+    provider = TerminalProvider(tmp_path, protocol)
 
     await provider.initialize()
     await provider.start()
@@ -177,6 +178,7 @@ async def test_terminal_provider_emits_command_completed_observation(
     assert observation.metadata.source == "terminal"
 
     assert observation.metadata.attributes == {
+        "workspace": str(tmp_path),
         "command_id": "123-456",
         "command": "printf 'hello'",
         "cwd": str(tmp_path),
