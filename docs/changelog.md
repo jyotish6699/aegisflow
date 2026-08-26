@@ -1,325 +1,491 @@
-# Changelog
+**# Changelog**
 
 All notable changes to AegisFlow are documented in this file.
 
----
+**---**
 
-## [v0.0.8] - Observation Foundation
+**## [v0.0.9] - Observation Foundation — Terminal Provider**
 
-### Status
+**### Status**
+
+✅ Terminal Provider milestone completed
+
+**### Added**
+
+\- Added the Terminal Provider as a concrete Observation Provider on top of the Observation Foundation.
+
+\- Added Terminal Provider lifecycle implementation following the common provider contract:
+
+  \- `initialize()`
+
+  \- `start()`
+
+  \- `observe()`
+
+  \- `stop()`
+
+\- Added Bash terminal integration for observing command lifecycle activity.
+
+\- Added dedicated JSONL protocol output for Terminal lifecycle observations.
+
+\- Added `command.started` observation.
+
+\- Added `command.completed` observation.
+
+\- Added command lifecycle correlation using `command_id`.
+
+\- Added command working-directory propagation through `cwd`.
+
+\- Added command exit-code propagation.
+
+\- Added command duration propagation.
+
+\- Added Terminal Provider unit tests.
+
+\- Added Bash integration tests.
+
+\- Added Terminal Provider end-to-end tests.
+
+**### Terminal Observations**
+
+The Terminal Provider observes:
+
+\- `command.started`
+
+\- `command.completed`
+
+The command lifecycle is represented as:
+
+```text
+command.started
+
+      ↓
+
+Command executes
+
+      ↓
+
+command.completed
+```
+
+**### Bash Integration**
+
+The Bash integration:
+
+\- Emits lifecycle observations through the configured protocol file descriptor.
+
+\- Preserves ordinary command stdout.
+
+\- Preserves ordinary command stderr.
+
+\- Keeps AegisFlow lifecycle observations distinguishable from command stderr.
+
+\- Avoids creating false command observations for the integration's own internal operations.
+
+**### Verified**
+
+\- Verified Terminal Provider identity.
+
+\- Verified provider lifecycle behavior.
+
+\- Verified no observations before `start()`.
+
+\- Verified behavior when the protocol is unavailable.
+
+\- Verified `command.started` observation.
+
+\- Verified `command.completed` observation.
+
+\- Verified command ID correlation between start and completion.
+
+\- Verified command working directory propagation.
+
+\- Verified successful command lifecycle with exit code `0`.
+
+\- Verified failed command lifecycle with a non-zero exit code.
+
+\- Verified command duration propagation.
+
+\- Verified command stderr preservation.
+
+\- Verified lifecycle observations are distinguishable from ordinary command stderr.
+
+\- Verified Bash integration behavior.
+
+\- Verified successful Terminal Provider end-to-end workflow.
+
+\- Verified failed Terminal Provider end-to-end workflow.
+
+\- Verified complete Terminal Provider test suite: **13 tests passed**.
+
+**### Current Scope**
+
+The Terminal Provider milestone is complete.
+
+Completed Observation Providers:
+
+\- Git Provider
+
+\- Terminal Provider
+
+Future Observation Providers:
+
+\- Filesystem Provider
+
+\- VS Code Provider
+
+**---**
+
+**## [v0.0.8] - Observation Foundation**
+
+**### Status**
 
 ✅ Git Provider milestone completed
 
-### Added
+**### Added**
 
-- Introduced the Observation Foundation as a modular architecture for collecting objective developer workspace activity.
+\- Introduced the Observation Foundation as a modular architecture for collecting objective developer workspace activity.
 
-- Added the canonical `Observation` model.
+\- Added the canonical `Observation` model.
 
-- Added shared observation metadata definitions.
+\- Added shared observation metadata definitions.
 
-- Added common observation and provider enums.
+\- Added common observation and provider enums.
 
-- Added the Observation Provider contract.
+\- Added the Observation Provider contract.
 
-- Added provider lifecycle contract:
-  - `initialize()`
-  - `start()`
-  - `observe()`
-  - `stop()`
+\- Added provider lifecycle contract:
 
-- Added provider registry for managing available Observation Providers.
+  \- `initialize()`
 
-- Added provider discovery abstraction.
+  \- `start()`
 
-- Added provider validation.
+  \- `observe()`
 
-- Added Observation Foundation configuration model.
+  \- `stop()`
 
-- Added configuration loader.
+\- Added provider registry for managing available Observation Providers.
 
-- Added in-process Observation Bus.
+\- Added provider discovery abstraction.
 
-- Added Observation Publisher.
+\- Added provider validation.
 
-- Added Observation Subscriber contract.
+\- Added Observation Foundation configuration model.
 
-- Added provider health tracking.
+\- Added configuration loader.
 
-- Added provider loading based on configuration.
+\- Added in-process Observation Bus.
 
-- Added provider startup coordination.
+\- Added Observation Publisher.
 
-- Added provider shutdown coordination.
+\- Added Observation Subscriber contract.
 
-- Added the first concrete Observation Provider: Git Provider.
+\- Added provider health tracking.
 
-- Added Git repository discovery.
+\- Added provider loading based on configuration.
 
-- Added Git state model containing:
-  - branch
-  - working-tree state
-  - commit SHA
-  - commit message
+\- Added provider startup coordination.
 
-- Added Git-specific exceptions.
+\- Added provider shutdown coordination.
 
-### Git Observations
+\- Added the first concrete Observation Provider: Git Provider.
+
+\- Added Git repository discovery.
+
+\- Added Git state model containing:
+
+  \- branch
+
+  \- working-tree state
+
+  \- commit SHA
+
+  \- commit message
+
+\- Added Git-specific exceptions.
+
+**### Git Observations**
 
 The Git Provider observes:
 
-- `repository.detected`
-- `branch.changed`
-- `working_tree.changed`
-- `commit.changed`
+\- `repository.detected`
 
-### Verified
+\- `branch.changed`
 
-- Verified Git repository detection.
+\- `working_tree.changed`
 
-- Verified branch change observation.
+\- `commit.changed`
 
-- Verified dirty working-tree observation.
+**### Verified**
 
-- Verified clean working-tree observation after a commit.
+\- Verified Git repository detection.
 
-- Verified commit change observation with actual commit SHA and commit message.
+\- Verified branch change observation.
 
-- Verified provider lifecycle:
-  - no observation before `start()`
-  - repository detection emitted once
-  - no duplicate observations for unchanged state
-  - no observations after `stop()`
+\- Verified dirty working-tree observation.
 
-- Verified complete Git Provider end-to-end observation workflow.
+\- Verified clean working-tree observation after a commit.
 
-- Verified Git Provider test suite.
+\- Verified commit change observation with actual commit SHA and commit message.
 
-### Current Scope
+\- Verified provider lifecycle:
+
+  \- no observation before `start()`
+
+  \- repository detection emitted once
+
+  \- no duplicate observations for unchanged state
+
+  \- no observations after `stop()`
+
+\- Verified complete Git Provider end-to-end observation workflow.
+
+\- Verified Git Provider test suite.
+
+**### Current Scope**
 
 The Git Provider milestone is complete.
 
 Future Observation Providers:
 
-- Terminal Provider
-- Filesystem Provider
-- VS Code Provider
+\- Terminal Provider
 
----
+\- Filesystem Provider
 
-## [v0.0.7] - 2026-08-04
+\- VS Code Provider
 
-### Added
+**---**
 
-- Introduced the first Timeline read model for reconstructing developer sessions.
+**## [v0.0.7] - 2026-08-04**
 
-- Added Timeline API for retrieving complete session timelines.
+**### Added**
 
-- Implemented Timeline Service for rebuilding sessions from persisted events.
+\- Introduced the first Timeline read model for reconstructing developer sessions.
 
-- Added Timeline and TimelineEvent response schemas.
+\- Added Timeline API for retrieving complete session timelines.
 
-- Introduced frontend Timeline Service for consuming the Timeline API.
+\- Implemented Timeline Service for rebuilding sessions from persisted events.
 
-- Added Timeline UI for displaying reconstructed session history.
+\- Added Timeline and TimelineEvent response schemas.
 
-- Added human-readable event labels.
+\- Introduced frontend Timeline Service for consuming the Timeline API.
 
-- Added timeline event counter.
+\- Added Timeline UI for displaying reconstructed session history.
 
-- Added empty timeline handling.
+\- Added human-readable event labels.
 
-### Changed
+\- Added timeline event counter.
 
-- Replaced the runtime Live Event Console with a database-backed Timeline view.
+\- Added empty timeline handling.
 
-- Refactored the frontend to render persisted events instead of runtime event emissions.
+**### Changed**
 
-- Standardized timeline rendering with reusable formatting helpers.
+\- Replaced the runtime Live Event Console with a database-backed Timeline view.
 
-- Improved timestamp formatting for chronological event display.
+\- Refactored the frontend to render persisted events instead of runtime event emissions.
 
-### Verified
+\- Standardized timeline rendering with reusable formatting helpers.
 
-- Verified Timeline API responses.
+\- Improved timestamp formatting for chronological event display.
 
-- Verified chronological event ordering.
+**### Verified**
 
-- Verified session reconstruction from persisted events.
+\- Verified Timeline API responses.
 
-- Verified end-to-end Timeline generation from PostgreSQL.
+\- Verified chronological event ordering.
 
-- Verified frontend Timeline rendering.
+\- Verified session reconstruction from persisted events.
 
-- Verified event count accuracy.
+\- Verified end-to-end Timeline generation from PostgreSQL.
 
-- Verified Timeline lifecycle from database to UI.
+\- Verified frontend Timeline rendering.
 
----
+\- Verified event count accuracy.
 
-## [v0.0.6] - 2026-08-03
+\- Verified Timeline lifecycle from database to UI.
 
-### Added
+**---**
 
-- Introduced persistent session management with a dedicated `sessions` table.
+**## [v0.0.6] - 2026-08-03**
 
-- Redesigned the `events` table using a normalized event schema.
+**### Added**
 
-- Added a foreign key relationship between sessions and events.
+\- Introduced persistent session management with a dedicated `sessions` table.
 
-- Implemented Session API and Session Service.
+\- Redesigned the `events` table using a normalized event schema.
 
-- Introduced Rich Event Lifecycle with seven business events:
-  - `session.started`
-  - `workspace.project.updated`
-  - `workspace.task.updated`
-  - `workspace.note.updated`
-  - `session.summary.updated`
-  - `session.next_step.updated`
-  - `session.completed`
+\- Added a foreign key relationship between sessions and events.
 
-- Added frontend and backend event registries.
+\- Implemented Session API and Session Service.
 
-- Added backend event validation and payload contract validation.
+\- Introduced Rich Event Lifecycle with seven business events:
 
-- Added session reference validation before event persistence.
+  \- `session.started`
 
-- Integrated Alembic for database schema migrations.
+  \- `workspace.project.updated`
 
-### Changed
+  \- `workspace.task.updated`
 
-- Refactored the frontend to create backend sessions before emitting events.
+  \- `workspace.note.updated`
 
-- Replaced the legacy event structure (`event_id`, `type`, `timestamp`) with the normalized event model (`id`, `session_id`, `event_type`, `occurred_at`, `payload`, `created_at`).
+  \- `session.summary.updated`
 
-- Updated the Live Event Console to consume backend event responses.
+  \- `session.next_step.updated`
 
-- Standardized event payloads across the frontend and backend.
+  \- `session.completed`
 
-### Verified
+\- Added frontend and backend event registries.
 
-- Verified end-to-end session creation.
+\- Added backend event validation and payload contract validation.
 
-- Verified session–event relationship through foreign keys.
+\- Added session reference validation before event persistence.
 
-- Verified Rich Event Lifecycle event ordering.
+\- Integrated Alembic for database schema migrations.
 
-- Verified payload validation and backend event validation.
+**### Changed**
 
-- Verified PostgreSQL persistence through pgAdmin.
+\- Refactored the frontend to create backend sessions before emitting events.
 
-- Verified frontend rendering using backend event responses.
+\- Replaced the legacy event structure (`event_id`, `type`, `timestamp`) with the normalized event model (`id`, `session_id`, `event_type`, `occurred_at`, `payload`, `created_at`).
 
-- Verified Alembic migration workflow.
+\- Updated the Live Event Console to consume backend event responses.
 
----
+\- Standardized event payloads across the frontend and backend.
 
-## [v0.0.5] - 2026-07-18
+**### Verified**
 
-### Added
+\- Verified end-to-end session creation.
 
-- Frontend workspace session lifecycle
+\- Verified session–event relationship through foreign keys.
 
-- Session state management
+\- Verified Rich Event Lifecycle event ordering.
 
-- Workspace validation
+\- Verified payload validation and backend event validation.
 
-- Workspace locking
+\- Verified PostgreSQL persistence through pgAdmin.
 
-- Session wrap-up workflow
+\- Verified frontend rendering using backend event responses.
 
-- Previous session rendering
+\- Verified Alembic migration workflow.
 
-- Workspace reset
+**---**
 
-- Live event console improvements
+**## [v0.0.5] - 2026-07-18**
 
-### Changed
+**### Added**
 
-- Refactored workspace flow into SessionState, WorkspaceUI and WrapupUI
+\- Frontend workspace session lifecycle
 
-- Replaced direct session ending with a dedicated wrap-up workflow
+\- Session state management
 
-- Improved frontend architecture in preparation for backend persistence
+\- Workspace validation
 
-### Fixed
+\- Workspace locking
 
-- Workspace state restoration after session completion
+\- Session wrap-up workflow
 
-- Previous session rendering workflow
+\- Previous session rendering
 
----
+\- Workspace reset
 
-## [v0.0.4] - Event Persistence
+\- Live event console improvements
 
-### Added
+**### Changed**
 
-- Integrated PostgreSQL as the persistent storage layer.
+\- Refactored workspace flow into SessionState, WorkspaceUI and WrapupUI
 
-- Configured SQLAlchemy Engine, Session management, and Declarative Base.
+\- Replaced direct session ending with a dedicated wrap-up workflow
 
-- Implemented the `Event` database model for standardized event storage.
+\- Improved frontend architecture in preparation for backend persistence
 
-- Added automatic database table creation during application startup.
+**### Fixed**
 
-- Implemented an `Event Service` to separate business logic from API routes.
+\- Workspace state restoration after session completion
 
-- Added Pydantic schemas for request validation and type safety.
+\- Previous session rendering workflow
 
-- Connected the FastAPI Event Receiver to PostgreSQL through SQLAlchemy.
+**---**
 
-- Successfully completed the first end-to-end event persistence pipeline.
+**## [v0.0.4] - Event Persistence**
 
-### Improved
+**### Added**
 
-- Refactored the backend into a modular architecture:
-  - `api/`
-  - `services/`
-  - `models/`
-  - `schemas/`
-  - `database.py`
+\- Integrated PostgreSQL as the persistent storage layer.
 
-- Standardized event naming by using `event_id` consistently across the frontend, backend, and database.
+\- Configured SQLAlchemy Engine, Session management, and Declarative Base.
 
-### Verified
+\- Implemented the `Event` database model for standardized event storage.
 
-- Events generated from the frontend are successfully:
-  - Received by FastAPI
-  - Validated by Pydantic
-  - Processed by the Event Service
-  - Persisted into PostgreSQL
-  - Verified using pgAdmin
+\- Added automatic database table creation during application startup.
 
----
+\- Implemented an `Event Service` to separate business logic from API routes.
 
-## [v0.0.3] - Backend Event Receiver
+\- Added Pydantic schemas for request validation and type safety.
 
-- Implemented FastAPI Event Receiver.
+\- Connected the FastAPI Event Receiver to PostgreSQL through SQLAlchemy.
 
-- Connected the Frontend Event Engine with the backend using HTTP POST.
+\- Successfully completed the first end-to-end event persistence pipeline.
 
-- Added CORS support.
+**### Improved**
 
-- Implemented response validation before updating the frontend console.
+\- Refactored the backend into a modular architecture:
 
----
+  \- `api/`
 
-## [v0.0.2] - Frontend Event Engine
+  \- `services/`
 
-- Implemented the frontend Event Engine.
+  \- `models/`
 
-- Added standardized event generation and dispatch mechanism.
+  \- `schemas/`
 
-- Introduced event lifecycle management.
+  \- `database.py`
 
----
+\- Standardized event naming by using `event_id` consistently across the frontend, backend, and database.
 
-## [v0.0.1] - Frontend Foundation
+**### Verified**
 
-- Initial HTML, CSS, and JavaScript frontend.
+\- Events generated from the frontend are successfully:
 
-- Live Event Console.
+  \- Received by FastAPI
 
-- Session controls.
+  \- Validated by Pydantic
 
-- Basic developer workspace.
+  \- Processed by the Event Service
+
+  \- Persisted into PostgreSQL
+
+  \- Verified using pgAdmin
+
+**---**
+
+**## [v0.0.3] - Backend Event Receiver**
+
+\- Implemented FastAPI Event Receiver.
+
+\- Connected the Frontend Event Engine with the backend using HTTP POST.
+
+\- Added CORS support.
+
+\- Implemented response validation before updating the frontend console.
+
+**---**
+
+**## [v0.0.2] - Frontend Event Engine**
+
+\- Implemented the frontend Event Engine.
+
+\- Added standardized event generation and dispatch mechanism.
+
+\- Introduced event lifecycle management.
+
+**---**
+
+**## [v0.0.1] - Frontend Foundation**
+
+\- Initial HTML, CSS, and JavaScript frontend.
+
+\- Live Event Console.
+
+\- Session controls.
+
+\- Basic developer workspace.
