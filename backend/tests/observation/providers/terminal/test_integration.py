@@ -77,6 +77,44 @@ def test_bash_emits_command_lifecycle_for_successful_command(
     assert completed[0]["duration"] >= 0
 
 
+def test_bash_integration_does_not_emit_observation_when_only_sourced(
+    tmp_path: Path,
+) -> None:
+    """
+    Sourcing the Bash integration without executing a developer
+    command should not produce a command lifecycle observation.
+    """
+
+    integration = (
+        Path(__file__).parents[4]
+        / "observation"
+        / "providers"
+        / "terminal"
+        / "bash"
+        / "integration.sh"
+    )
+
+    protocol = tmp_path / "aegisflow-protocol.jsonl"
+
+    subprocess.run(
+        [
+            "bash",
+            "-c",
+            f"""
+            exec 3>"{protocol}"
+
+            source "{integration}"
+            """,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert not protocol.read_text().strip()
+
+
 def test_bash_preserves_command_stderr(
     tmp_path: Path,
 ) -> None:

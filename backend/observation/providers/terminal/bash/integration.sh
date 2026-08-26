@@ -6,10 +6,16 @@ _aegisflow_cwd=""
 _aegisflow_started_at=""
 _aegisflow_internal=0
 _aegisflow_last_debug_command=""
+_aegisflow_skip_next_debug=0
 
 
 _aegisflow_emit_started() {
     if [[ "$_aegisflow_internal" == "1" ]]; then
+        return
+    fi
+
+    if [[ "$_aegisflow_skip_next_debug" == "1" ]]; then
+        _aegisflow_skip_next_debug=0
         return
     fi
 
@@ -124,3 +130,5 @@ PY
 
 trap '_aegisflow_emit_started' DEBUG
 trap '_aegisflow_emit_completed' EXIT
+
+_aegisflow_skip_next_debug=1
