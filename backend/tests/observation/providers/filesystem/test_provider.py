@@ -206,3 +206,81 @@ async def test_filesystem_provider_emits_file_deleted_observation(
         "workspace": str(tmp_path),
         "path": str(test_file.resolve()),
     }
+
+
+@pytest.mark.asyncio
+async def test_filesystem_provider_ignores_file_outside_workspace(
+    tmp_path: Path,
+) -> None:
+    """
+    FilesystemProvider should not emit observations for files
+    outside the configured workspace.
+    """
+
+    workspace = tmp_path / "workspace"
+    outside = tmp_path / "outside"
+
+    workspace.mkdir()
+    outside.mkdir()
+
+    provider = FilesystemProvider(workspace)
+
+    await provider.initialize()
+    await provider.start()
+
+    outside_file = outside / "outside.txt"
+    outside_file.write_text("hello")
+
+    observation = None
+
+    for _ in range(100):
+        observations = [
+            item
+            async for item in provider.observe()
+        ]
+
+        if observations:
+            observation = observations[0]
+            break
+
+        await asyncio.sleep(0.01)
+
+    await provider.stop()
+
+    assert observation is None
+
+
+@pytest.mark.asyncio
+async def test_filesystem_provider_ignores_directory_activity(
+    tmp_path: Path,
+) -> None:
+    """
+    FilesystemProvider should not emit observations for
+    directory creation inside the workspace.
+    """
+
+    provider = FilesystemProvider(tmp_path)
+
+    await provider.initialize()
+    await provider.start()
+
+    directory = tmp_path / "subdir"
+    directory.mkdir()
+
+    observation = None
+
+    for _ in range(100):
+        observations = [
+            item
+            async for item in provider.observe()
+        ]
+
+        if observations:
+            observation = observations[0]
+            break
+
+        await asyncio.sleep(0.01)
+
+    await provider.stop()
+
+    assert observation is None

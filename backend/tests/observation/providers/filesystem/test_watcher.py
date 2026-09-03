@@ -165,3 +165,51 @@ def test_filesystem_watcher_ignores_directory_events(
     watcher.stop()
 
     assert event is None
+
+
+def test_filesystem_watcher_ignores_moved_files(
+    tmp_path: Path,
+) -> None:
+    """
+    FilesystemWatcher should not emit events for file moves.
+    """
+
+    watcher = FilesystemWatcher(tmp_path)
+    watcher.start()
+
+    source = tmp_path / "source.txt"
+    destination = tmp_path / "destination.txt"
+
+    source.write_text("hello")
+
+    # Wait until the creation event has reached the queue.
+    created_event = wait_for_event(
+        watcher,
+        FilesystemEventType.CREATED,
+    )
+
+    assert created_event is not None
+
+    # Drain any remaining events caused by file creation.
+    time.sleep(0.05)
+
+    while watcher.get_event() is not None:
+        pass
+
+    source.rename(destination)
+
+    time.sleep(0.1)
+
+    events = []
+
+    while True:
+        event = watcher.get_event()
+
+        if event is None:
+            break
+
+        events.append(event)
+
+    watcher.stop()
+
+    assert events == []
