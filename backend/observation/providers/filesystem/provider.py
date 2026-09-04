@@ -23,7 +23,10 @@ class FilesystemProvider(ObservationProvider):
 
         self._watcher: FilesystemWatcher | None = None
 
+        self._last_event_key: tuple[FilesystemEventType, Path] | None = None
+
         self._started = False
+        
 
     @property
     def provider_type(self) -> ProviderType:
@@ -37,6 +40,7 @@ class FilesystemProvider(ObservationProvider):
         Observation does not begin during initialization.
         """
         self._watcher = FilesystemWatcher(self._workspace)
+        self._last_event_key = None
 
     async def start(self) -> None:
         """
@@ -63,6 +67,16 @@ class FilesystemProvider(ObservationProvider):
 
         if event is None:
             return
+
+        event_key = (
+            event.event_type,
+            event.path,
+        )
+
+        if event_key == self._last_event_key:
+            return
+
+        self._last_event_key = event_key
 
         if event.event_type == FilesystemEventType.CREATED:
             yield Observation(
@@ -112,4 +126,5 @@ class FilesystemProvider(ObservationProvider):
             self._watcher.stop()
 
         self._watcher = None
+        self._last_event_key = None
         self._started = False
