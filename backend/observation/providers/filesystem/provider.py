@@ -1,3 +1,5 @@
+import asyncio
+
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -63,7 +65,9 @@ class FilesystemProvider(ObservationProvider):
         if self._watcher is None:
             return
 
-        event = self._watcher.get_event()
+        event = await asyncio.to_thread(
+            self._watcher.get_event_blocking
+        )
 
         if event is None:
             return

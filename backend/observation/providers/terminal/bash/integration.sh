@@ -4,9 +4,9 @@ _aegisflow_command_id=""
 _aegisflow_command=""
 _aegisflow_cwd=""
 _aegisflow_started_at=""
-_aegisflow_internal=0
+_aegisflow_internal=1
 _aegisflow_last_debug_command=""
-_aegisflow_skip_next_debug=0
+_aegisflow_skip_next_debug=1
 
 
 _aegisflow_emit_started() {
@@ -131,4 +131,4 @@ PY
 trap '_aegisflow_emit_started' DEBUG
 trap '_aegisflow_emit_completed' EXIT
 
-_aegisflow_skip_next_debug=1
+_aegisflow_internal=0
