@@ -13,39 +13,58 @@ class FilesystemEventHandlerAdapter(FileSystemEventHandler):
     FilesystemEvent objects.
     """
 
-    def __init__(self, event_queue: Queue[FilesystemEvent]) -> None:
+    def __init__(
+        self,
+        event_queue: Queue[FilesystemEvent],
+        workspace: Path,
+    ) -> None:
         self._event_queue = event_queue
+        self._workspace = workspace.resolve()
+
+    def _is_ignored(self, path: Path) -> bool:
+        try:
+            relative_path = path.resolve().relative_to(self._workspace)
+        except ValueError:
+            return True
+
+        return ".git" in relative_path.parts
 
     def on_created(self, event: FileSystemEvent) -> None:
-        if event.is_directory:
+        path = Path(event.src_path).resolve()
+
+        if event.is_directory or self._is_ignored(path):
             return
 
         self._event_queue.put(
             FilesystemEvent(
                 event_type=FilesystemEventType.CREATED,
-                path=Path(event.src_path).resolve(),
+                path=path
             )
         )
 
     def on_modified(self, event: FileSystemEvent) -> None:
-        if event.is_directory:
+        path = Path(event.src_path).resolve()
+
+        if event.is_directory or self._is_ignored(path):
             return
 
         self._event_queue.put(
             FilesystemEvent(
                 event_type=FilesystemEventType.MODIFIED,
-                path=Path(event.src_path).resolve(),
+                path=path,
             )
         )
 
     def on_deleted(self, event: FileSystemEvent) -> None:
-        if event.is_directory:
+        path = Path(event.src_path).resolve()
+
+        if event.is_directory or self._is_ignored(path):
             return
 
         self._event_queue.put(
             FilesystemEvent(
                 event_type=FilesystemEventType.DELETED,
-                path=Path(event.src_path).resolve(),
+                path=path,
             )
         )
 
@@ -61,7 +80,10 @@ class FilesystemWatcher:
         self._event_queue: Queue[FilesystemEvent] = Queue()
 
         self._observer: Observer | None = None
-        self._handler = FilesystemEventHandlerAdapter(self._event_queue)
+        self._handler = FilesystemEventHandlerAdapter(
+            self._event_queue,
+            self._workspace,
+        )
 
         self._started = False
 
@@ -96,3 +118,11 @@ class FilesystemWatcher:
             self._observer = None
 
         self._started = False
+
+    def get_event_blocking(self, timeout: float = 0.1) -> FilesystemEvent | None:
+        try:
+            return self._event_queue.get(timeout=timeout)
+        except Empty:
+            return None
+
+

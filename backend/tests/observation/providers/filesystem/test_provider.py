@@ -30,6 +30,9 @@ class FakeFilesystemWatcher:
 
         return self._events.popleft()
 
+    def get_event_blocking(self) -> FilesystemEvent:
+        return self._events.popleft()
+
     def stop(self) -> None:
         self.stopped = True
 
