@@ -33,6 +33,11 @@ class ObservationRuntime:
         self._started = False
         self._stopped = False
 
+    @property
+    def workspace(self) -> Path:
+        """Return the workspace owned by this runtime."""
+        return self._workspace
+
     async def initialize(self) -> None:
         """Initialize all providers."""
 
