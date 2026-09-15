@@ -3,10 +3,10 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from observation.core.observation import Observation
-from observation.providers.filesystem.provider import FilesystemProvider
-from observation.providers.git.provider import GitProvider
-from observation.providers.terminal.provider import TerminalProvider
-
+from observation.core.provider import ObservationProvider
+from observation.lifecycle.starter import ProviderStarter
+from observation.lifecycle.stopper import ProviderStopper
+from observation.lifecycle.stopper import ProviderStopper
 
 class ObservationRuntime:
     """
@@ -14,24 +14,30 @@ class ObservationRuntime:
     and exposes their observations as one unified asynchronous stream.
     """
 
-    def __init__(self, workspace: Path) -> None:
+    def __init__(
+        self,
+        workspace: Path,
+        providers: list[ObservationProvider],
+        starter: ProviderStarter,
+        stopper: ProviderStopper,
+    ) -> None:
         self._workspace = workspace.resolve()
-
-        self._terminal_protocol = (
-            Path("/tmp") / "aegisflow-terminal.jsonl"
-        )
-
-        self._providers = [
-            GitProvider(self._workspace),
-            TerminalProvider(
-                self._workspace,
-                self._terminal_protocol,
-            ),
-            FilesystemProvider(self._workspace),
-        ]
+        self._providers = providers
+        self._starter = starter
+        self._stopper = stopper
 
         self._started = False
         self._stopped = False
+
+    @property
+    def workspace(self) -> Path:
+        """Return the workspace owned by this runtime."""
+        return self._workspace
+
+    @property
+    def providers(self) -> list[ObservationProvider]:
+        """Return the providers owned by this runtime session."""
+        return self._providers
 
     async def initialize(self) -> None:
         """Initialize all providers."""
@@ -40,11 +46,13 @@ class ObservationRuntime:
             await provider.initialize()
 
     async def start(self) -> None:
-        """Start all providers."""
+        """Start providers through the lifecycle coordinator."""
 
-        for provider in self._providers:
-            await provider.start()
+        started_providers = await self._starter.start_all(
+            self._providers
+        )
 
+        self._providers = started_providers
         self._started = True
         self._stopped = False
 
