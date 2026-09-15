@@ -38,7 +38,6 @@ class ObservationRuntime:
         """Return the providers owned by this runtime session."""
         return self._providers
 
-
     async def start(self) -> None:
         """Start providers through the lifecycle coordinator."""
 
