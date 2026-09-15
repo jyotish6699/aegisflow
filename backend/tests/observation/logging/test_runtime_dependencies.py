@@ -40,7 +40,11 @@ class FakeStarter:
 
 
 class FakeStopper:
+    def __init__(self) -> None:
+        self.stopped = None
+
     async def stop_all(self, providers):
+        self.stopped = providers
         return providers
 
 
@@ -89,3 +93,35 @@ async def test_runtime_start_delegates_to_starter(
     await runtime.start()
 
     assert starter.started == providers
+
+
+def test_runtime_does_not_own_provider_initialization() -> None:
+    assert not hasattr(
+        ObservationRuntime,
+        "initialize",
+    )
+
+
+@pytest.mark.asyncio
+async def test_runtime_stop_delegates_to_stopper(
+    tmp_path: Path,
+) -> None:
+    providers = [
+        FakeProvider(ProviderType.GIT),
+        FakeProvider(ProviderType.FILESYSTEM),
+    ]
+
+    starter = FakeStarter()
+    stopper = FakeStopper()
+
+    runtime = ObservationRuntime(
+        workspace=tmp_path / "workspace",
+        providers=providers,
+        starter=starter,
+        stopper=stopper,
+    )
+
+    await runtime.stop()
+
+    assert stopper.stopped == providers
+

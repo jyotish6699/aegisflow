@@ -6,7 +6,6 @@ from observation.core.observation import Observation
 from observation.core.provider import ObservationProvider
 from observation.lifecycle.starter import ProviderStarter
 from observation.lifecycle.stopper import ProviderStopper
-from observation.lifecycle.stopper import ProviderStopper
 
 class ObservationRuntime:
     """
@@ -39,11 +38,6 @@ class ObservationRuntime:
         """Return the providers owned by this runtime session."""
         return self._providers
 
-    async def initialize(self) -> None:
-        """Initialize all providers."""
-
-        for provider in self._providers:
-            await provider.initialize()
 
     async def start(self) -> None:
         """Start providers through the lifecycle coordinator."""
@@ -94,11 +88,14 @@ class ObservationRuntime:
             await asyncio.sleep(0.05)
 
     async def stop(self) -> None:
-        """Stop all providers."""
+        """Stop providers through the lifecycle coordinator."""
 
         self._stopped = True
 
-        for provider in reversed(self._providers):
-            await provider.stop()
+        stopped_providers = await self._stopper.stop_all(
+            self._providers
+        )
 
+        self._providers = stopped_providers
         self._started = False
+
