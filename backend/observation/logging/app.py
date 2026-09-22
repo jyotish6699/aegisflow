@@ -9,6 +9,18 @@ from textual.message import Message
 
 from observation.core.enums import ProviderType
 from observation.core.observation import Observation
+from observation.composition.composer import ProviderComposer
+from observation.composition.factory import ProviderFactory
+from observation.config.settings import ObservationSettings
+from observation.lifecycle.health import ProviderHealthTracker
+from observation.lifecycle.loader import ProviderLoader
+from observation.lifecycle.starter import ProviderStarter
+from observation.lifecycle.stopper import ProviderStopper
+from observation.providers.filesystem.provider import FilesystemProvider
+from observation.providers.git.provider import GitProvider
+from observation.providers.terminal.provider import TerminalProvider
+from observation.registry.discovery import discover_providers
+from observation.registry.registry import ProviderRegistry
 from observation.logging.runtime import ObservationRuntime
 from observation.core.metadata import ObservationMetadata
 
@@ -68,8 +80,57 @@ class ObservationLoggingApp(App):
     def __init__(self) -> None:
         super().__init__()
 
+        workspace = Path.home() / "dev" / "aegisflow"
+        terminal_protocol = Path("/tmp/aegisflow-terminal.jsonl")
+
+        discovered = discover_providers(
+            [
+                GitProvider,
+                TerminalProvider,
+                FilesystemProvider,
+            ]
+        )
+
+        registry = ProviderRegistry()
+
+        factory = ProviderFactory(
+            workspace,
+            terminal_protocol,
+        )
+
+        composer = ProviderComposer(
+            factory,
+            registry,
+        )
+
+        composer.compose(discovered)
+
+        settings = ObservationSettings(
+            enabled=True,
+            providers=[
+                ProviderType.GIT,
+                ProviderType.TERMINAL,
+                ProviderType.FILESYSTEM,
+            ],
+        )
+
+        loader = ProviderLoader(
+            registry,
+            settings,
+        )
+
+        providers = loader.load()
+
+        health = ProviderHealthTracker()
+
+        starter = ProviderStarter(health)
+        stopper = ProviderStopper(health)
+
         self._runtime = ObservationRuntime(
-            Path.home() / "dev" / "aegisflow"
+            workspace,
+            providers,
+            starter,
+            stopper,
         )
 
     def compose(self) -> ComposeResult:
@@ -93,7 +154,7 @@ class ObservationLoggingApp(App):
             )
 
     async def on_mount(self) -> None:
-        await self._runtime.initialize()
+
         await self._runtime.start()
 
         self.run_worker(
