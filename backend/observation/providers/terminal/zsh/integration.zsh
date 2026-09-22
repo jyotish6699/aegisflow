@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+zmodload zsh/datetime
+
 _aegisflow_command_id=""
 _aegisflow_command=""
 _aegisflow_cwd=""
