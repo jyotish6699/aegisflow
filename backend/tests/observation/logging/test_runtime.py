@@ -299,3 +299,57 @@ async def test_runtime_can_restart_cleanly(
 
     assert stopper.stop_all.await_count == 2
 
+
+async def test_runtime_observe_exits_when_stopped(
+    tmp_path: Path,
+) -> None:
+    release = asyncio.Event()
+
+    async def observe():
+        await release.wait()
+
+    provider = FakeProvider(
+        ProviderType.GIT,
+        observe,
+    )
+
+    starter = Mock()
+    starter.start_all = AsyncMock(
+        return_value=[provider]
+    )
+
+    stopper = Mock()
+    stopper.stop_all = AsyncMock(
+        return_value=[]
+    )
+
+    runtime = ObservationRuntime(
+        tmp_path,
+        [provider],
+        starter,
+        stopper,
+    )
+
+    await runtime.start()
+
+    stream = runtime.observe()
+
+    consumer = asyncio.create_task(
+        anext(stream)
+    )
+
+    await asyncio.sleep(0)
+
+    await runtime.stop()
+
+    with pytest.raises(StopAsyncIteration):
+        await asyncio.wait_for(
+            consumer,
+            timeout=1,
+        )
+
+    assert runtime._observation_tasks == []
+    assert not runtime._started
+    assert runtime._stopped
+
+

@@ -20,9 +20,12 @@ class ObservationRuntime:
         self._providers = providers
         self._starter = starter
         self._stopper = stopper
+        self._stop_event = asyncio.Event()
         self._started = False
         self._stopped = False
-        self._observation_queue: asyncio.Queue[Observation] = asyncio.Queue()
+        self._observation_queue: asyncio.Queue[Observation | None] = (
+            asyncio.Queue()
+        )
         self._observation_tasks: list[asyncio.Task[None]] = []
 
     @property
@@ -43,6 +46,7 @@ class ObservationRuntime:
         self._providers = started_providers
         self._started = True
         self._stopped = False
+        self._stop_event = asyncio.Event()
 
         self._observation_queue = asyncio.Queue()
 
@@ -70,11 +74,38 @@ class ObservationRuntime:
             return
 
         while not self._stopped:
-            observation = await self._observation_queue.get()
-            yield observation
+            observation_task = asyncio.create_task(
+                self._observation_queue.get()
+            )
+            stop_task = asyncio.create_task(
+                self._stop_event.wait()
+            )
+
+            done, pending = await asyncio.wait(
+                {observation_task, stop_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            for task in pending:
+                task.cancel()
+
+            if stop_task in done:
+                await asyncio.gather(
+                    observation_task,
+                    return_exceptions=True,
+                )
+                return
+
+            await asyncio.gather(
+                stop_task,
+                return_exceptions=True,
+            )
+
+            yield observation_task.result()
 
     async def stop(self) -> None:
         self._stopped = True
+        self._stop_event.set()
 
         for task in self._observation_tasks:
             task.cancel()
