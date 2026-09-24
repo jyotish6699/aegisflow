@@ -215,3 +215,87 @@ async def test_runtime_isolates_provider_failure(
     await runtime.stop()
 
 
+async def test_runtime_can_restart_cleanly(
+    tmp_path: Path,
+) -> None:
+    first_observation = make_observation(
+        ProviderType.GIT,
+        "branch.changed",
+    )
+
+    second_observation = make_observation(
+        ProviderType.GIT,
+        "commit.changed",
+    )
+
+    session_count = 0
+    release = asyncio.Event()
+
+    async def observe():
+        nonlocal session_count
+
+        session_count += 1
+
+        if session_count == 1:
+            yield first_observation
+        else:
+            yield second_observation
+
+        await release.wait()
+
+    provider = FakeProvider(
+        ProviderType.GIT,
+        observe,
+    )
+
+    starter = Mock()
+    starter.start_all = AsyncMock(
+        return_value=[provider]
+    )
+
+    stopper = Mock()
+    stopper.stop_all = AsyncMock(
+        return_value=[provider]
+    )
+
+    runtime = ObservationRuntime(
+        tmp_path,
+        [provider],
+        starter,
+        stopper,
+    )
+
+    await runtime.start()
+
+    stream = runtime.observe()
+
+    first = await asyncio.wait_for(
+        anext(stream),
+        timeout=1,
+    )
+
+    assert first.observation_type == "branch.changed"
+
+    await runtime.stop()
+
+    await runtime.start()
+
+    stream = runtime.observe()
+
+    second = await asyncio.wait_for(
+        anext(stream),
+        timeout=1,
+    )
+
+    assert second.observation_type == "commit.changed"
+
+    assert session_count == 2
+    assert starter.start_all.await_count == 2
+    assert stopper.stop_all.await_count == 1
+
+    release.set()
+
+    await runtime.stop()
+
+    assert stopper.stop_all.await_count == 2
+
