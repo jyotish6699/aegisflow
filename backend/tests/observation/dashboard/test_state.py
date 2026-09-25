@@ -522,4 +522,85 @@ def test_dashboard_state_status_change_preserves_provider_information() -> None:
     assert state.git.reason == "provider stopped"
 
 
+def test_dashboard_state_creates_snapshot() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+        repository="aegisflow",
+    )
+
+    state = DashboardState(project=project)
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.RUNNING,
+    )
+
+    state.git.branch = "main"
+
+    snapshot = state.snapshot()
+
+    assert snapshot.project.name == "aegisflow"
+    assert snapshot.project.path == Path(
+        "/home/jyotish/dev/aegisflow"
+    )
+    assert snapshot.project.repository == "aegisflow"
+
+    assert (
+        snapshot.overall_status
+        == DashboardStatus.RUNNING
+    )
+
+    assert snapshot.git.status == ProviderStatus.RUNNING
+    assert snapshot.git.branch == "main"
+
+
+def test_dashboard_snapshot_does_not_share_provider_state() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    state.git.branch = "main"
+
+    snapshot = state.snapshot()
+
+    state.git.branch = "feature/test"
+
+    assert snapshot.git.branch == "main"
+    assert state.git.branch == "feature/test"
+
+
+def test_dashboard_snapshot_does_not_share_observation_buffer() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    observation = Observation(
+        provider=ProviderType.GIT,
+        observation_type="branch.changed",
+        metadata=ObservationMetadata(
+            source="git",
+            attributes={
+                "branch": "main",
+            },
+        ),
+    )
+
+    state.apply_observation(observation)
+
+    snapshot = state.snapshot()
+
+    assert len(snapshot.observations) == 1
+
+    state.observations.clear()
+
+    assert len(snapshot.observations) == 1
+
+
 

@@ -131,6 +131,49 @@ class FilesystemProviderState(ProviderState):
         self.event_type = event_type
 
 
+class ObservationSnapshot:
+    def __init__(
+        self,
+        timestamp: datetime,
+        provider: str,
+        observation_type: str,
+        rendered_message: str,
+    ) -> None:
+        self.timestamp = timestamp
+        self.provider = provider
+        self.observation_type = observation_type
+        self.rendered_message = rendered_message
+
+
+class TerminalLogSnapshot:
+    def __init__(
+        self,
+        timestamp: datetime,
+        message: str,
+    ) -> None:
+        self.timestamp = timestamp
+        self.message = message
+
+
+class DashboardSnapshot:
+    def __init__(
+        self,
+        project: ProjectState,
+        overall_status: DashboardStatus,
+        git: GitProviderState,
+        terminal: TerminalProviderState,
+        filesystem: FilesystemProviderState,
+        observations: list[ObservationSnapshot],
+        terminal_log: list[TerminalLogSnapshot],
+    ) -> None:
+        self.project = project
+        self.overall_status = overall_status
+        self.git = git
+        self.terminal = terminal
+        self.filesystem = filesystem
+        self.observations = observations
+        self.terminal_log = terminal_log
+
 class DashboardState:
     def __init__(
         self,
@@ -402,3 +445,54 @@ class DashboardState:
 
         if excess > 0:
             del self.terminal_log[:excess]
+
+    def snapshot(self) -> DashboardSnapshot:
+        return DashboardSnapshot(
+            project=ProjectState(
+                name=self.project.name,
+                path=self.project.path,
+                repository=self.project.repository,
+            ),
+            overall_status=self.overall_status,
+            git=GitProviderState(
+                status=self.git.status,
+                repository=self.git.repository,
+                branch=self.git.branch,
+                last_activity=self.git.last_activity,
+                information=self.git.information,
+                reason=self.git.reason,
+            ),
+            terminal=TerminalProviderState(
+                status=self.terminal.status,
+                shell=self.terminal.shell,
+                cwd=self.terminal.cwd,
+                active_session=self.terminal.active_session,
+                last_activity=self.terminal.last_activity,
+                information=self.terminal.information,
+                reason=self.terminal.reason,
+            ),
+            filesystem=FilesystemProviderState(
+                status=self.filesystem.status,
+                workspace=self.filesystem.workspace,
+                last_activity=self.filesystem.last_activity,
+                event_type=self.filesystem.event_type,
+                information=self.filesystem.information,
+                reason=self.filesystem.reason,
+            ),
+            observations=[
+                ObservationSnapshot(
+                    timestamp=entry.timestamp,
+                    provider=entry.provider,
+                    observation_type=entry.observation_type,
+                    rendered_message=entry.rendered_message,
+                )
+                for entry in self.observations
+            ],
+            terminal_log=[
+                TerminalLogSnapshot(
+                    timestamp=entry.timestamp,
+                    message=entry.message,
+                )
+                for entry in self.terminal_log
+            ],
+        )
