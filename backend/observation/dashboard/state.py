@@ -41,6 +41,29 @@ class ProviderState:
         self.reason = reason
 
 
+class ObservationEntry:
+    def __init__(
+        self,
+        timestamp: datetime,
+        provider: str,
+        observation_type: str,
+        rendered_message: str,
+    ) -> None:
+        self.timestamp = timestamp
+        self.provider = provider
+        self.observation_type = observation_type
+        self.rendered_message = rendered_message
+
+
+class TerminalLogEntry:
+    def __init__(
+        self,
+        timestamp: datetime,
+        message: str,
+    ) -> None:
+        self.timestamp = timestamp
+        self.message = message
+
 class GitProviderState(ProviderState):
     def __init__(
         self,
@@ -114,9 +137,13 @@ class DashboardState:
         git: GitProviderState | None = None,
         terminal: TerminalProviderState | None = None,
         filesystem: FilesystemProviderState | None = None,
+        observations: list[ObservationEntry] | None = None,
+        terminal_log: list[TerminalLogEntry] | None = None,
     ) -> None:
         self.project = project
         self.overall_status = overall_status
         self.git = git or GitProviderState()
         self.terminal = terminal or TerminalProviderState()
         self.filesystem = filesystem or FilesystemProviderState()
+        self.observations = observations or []
+        self.terminal_log = terminal_log or []
