@@ -2,6 +2,8 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
+from observation.core.enums import ProviderType
+from observation.core.observation import Observation
 
 class DashboardStatus(StrEnum):
     RUNNING = "running"
@@ -180,6 +182,168 @@ class DashboardState:
     ) -> None:
         self.terminal_log.append(entry)
         self._trim_terminal_log()
+
+    def apply_observation(
+        self,
+        observation: Observation,
+    ) -> None:
+        rendered_message = self._render_observation(
+            observation
+        )
+
+        self.add_observation(
+            ObservationEntry(
+                timestamp=observation.occurred_at,
+                provider=observation.provider.value,
+                observation_type=observation.observation_type,
+                rendered_message=rendered_message,
+            )
+        )
+
+        if observation.provider == ProviderType.TERMINAL:
+            self._apply_terminal_observation(observation)
+
+            self.add_terminal_log(
+                TerminalLogEntry(
+                    timestamp=observation.occurred_at,
+                    message=rendered_message,
+                )
+            )
+
+        elif observation.provider == ProviderType.FILESYSTEM:
+            self._apply_filesystem_observation(
+                observation
+            )
+
+        elif observation.provider == ProviderType.GIT:
+            self._apply_git_observation(observation)
+
+    def _render_observation(
+        self,
+        observation: Observation,
+    ) -> str:
+        attributes = observation.metadata.attributes
+
+        if observation.provider == ProviderType.TERMINAL:
+            command = attributes.get("command", "")
+
+            if observation.observation_type == "command.started":
+                return f"{command} started"
+
+            if observation.observation_type == "command.completed":
+                exit_code = attributes.get("exit_code")
+
+                if exit_code == 0:
+                    return f"{command} executed successfully"
+
+                if exit_code is not None:
+                    return (
+                        f"{command} failed "
+                        f"(exit code {exit_code})"
+                    )
+
+                return f"{command} executed"
+
+        if observation.provider == ProviderType.FILESYSTEM:
+            path = attributes.get("path", "")
+
+            if observation.observation_type == "file.created":
+                return f"{path} new created"
+
+            if observation.observation_type == "file.modified":
+                return f"{path} updated"
+
+            if observation.observation_type == "file.deleted":
+                return f"{path} deleted"
+
+        if observation.provider == ProviderType.GIT:
+            if observation.observation_type == "repository.detected":
+                repository = attributes.get("repository", "")
+                return f"{repository} repository detected"
+
+            if observation.observation_type == "branch.changed":
+                branch = attributes.get("branch", "")
+                return f"{branch} changed"
+
+            if observation.observation_type == "working_tree.changed":
+                clean = attributes.get("working_tree_clean")
+
+                if clean is True:
+                    return "working tree clean"
+
+                if clean is False:
+                    return "working tree changed"
+
+                return "working tree state changed"
+
+            if observation.observation_type == "commit.changed":
+                commit_message = attributes.get(
+                    "commit_message"
+                )
+
+                if commit_message:
+                    return f"{commit_message} committed"
+
+                return "commit changed"
+
+        return observation.observation_type
+
+    def _apply_terminal_observation(
+        self,
+        observation: Observation,
+    ) -> None:
+        attributes = observation.metadata.attributes
+
+        self.terminal.cwd = Path(
+            attributes["cwd"]
+        )
+
+        self.terminal.active_session = True
+        self.terminal.last_activity = observation.occurred_at
+
+        shell = attributes.get("shell")
+
+        if shell is not None:
+            self.terminal.shell = shell
+
+    def _apply_filesystem_observation(
+        self,
+        observation: Observation,
+    ) -> None:
+        attributes = observation.metadata.attributes
+
+        self.filesystem.workspace = Path(
+            attributes["workspace"]
+        )
+
+        self.filesystem.last_activity = (
+            observation.occurred_at
+        )
+
+        self.filesystem.event_type = (
+            observation.observation_type
+        )
+
+    def _apply_git_observation(
+        self,
+        observation: Observation,
+    ) -> None:
+        attributes = observation.metadata.attributes
+
+        self.git.last_activity = observation.occurred_at
+
+        repository = attributes.get("repository")
+
+        if repository is not None:
+            self.git.repository = repository
+
+        if observation.observation_type == "branch.changed":
+            self.git.branch = attributes.get("branch")
+
+        elif observation.observation_type == "repository.detected":
+            self.git.repository = attributes.get(
+                "repository"
+            )
 
     def _trim_observations(self) -> None:
         excess = len(self.observations) - self.max_observations

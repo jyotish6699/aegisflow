@@ -1,6 +1,10 @@
 from pathlib import Path
 from datetime import datetime
 
+from observation.core.enums import ProviderType
+from observation.core.metadata import ObservationMetadata
+from observation.core.observation import Observation
+
 from observation.dashboard.state import (
     DashboardState,
     DashboardStatus,
@@ -218,5 +222,171 @@ def test_dashboard_state_rejects_invalid_terminal_log_limit() -> None:
         assert False
     except ValueError as exc:
         assert str(exc) == "max_terminal_log must be greater than zero"
+
+
+def test_dashboard_state_applies_terminal_observation() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    occurred_at = datetime.now()
+
+    observation = Observation(
+        provider=ProviderType.TERMINAL,
+        observation_type="command.completed",
+        occurred_at=occurred_at,
+        metadata=ObservationMetadata(
+            source="terminal",
+            attributes={
+                "command": "pytest tests/observation/dashboard",
+                "cwd": "/home/jyotish/dev/aegisflow",
+                "exit_code": 0,
+            },
+        ),
+    )
+
+    state = DashboardState(project=project)
+
+    state.apply_observation(observation)
+
+    assert len(state.observations) == 1
+    assert (
+        state.observations[0].rendered_message
+        == "pytest tests/observation/dashboard executed successfully"
+    )
+
+    assert len(state.terminal_log) == 1
+    assert (
+        state.terminal_log[0].message
+        == "pytest tests/observation/dashboard executed successfully"
+    )
+
+    assert state.terminal.cwd == Path(
+        "/home/jyotish/dev/aegisflow"
+    )
+    assert state.terminal.active_session is True
+    assert state.terminal.last_activity == occurred_at
+
+
+def test_dashboard_state_renders_failed_terminal_command() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    observation = Observation(
+        provider=ProviderType.TERMINAL,
+        observation_type="command.completed",
+        metadata=ObservationMetadata(
+            source="terminal",
+            attributes={
+                "command": "pytest",
+                "cwd": "/home/jyotish/dev/aegisflow",
+                "exit_code": 1,
+            },
+        ),
+    )
+
+    state = DashboardState(project=project)
+
+    state.apply_observation(observation)
+
+    assert (
+        state.observations[0].rendered_message
+        == "pytest failed (exit code 1)"
+    )
+
+    assert (
+        state.terminal_log[0].message
+        == "pytest failed (exit code 1)"
+    )
+
+
+def test_dashboard_state_applies_filesystem_observation() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    occurred_at = datetime.now()
+
+    observation = Observation(
+        provider=ProviderType.FILESYSTEM,
+        observation_type="file.modified",
+        occurred_at=occurred_at,
+        metadata=ObservationMetadata(
+            source="filesystem",
+            attributes={
+                "workspace": "/home/jyotish/dev/aegisflow",
+                "path": (
+                    "/home/jyotish/dev/aegisflow/"
+                    "backend/observation/dashboard/state.py"
+                ),
+            },
+        ),
+    )
+
+    state = DashboardState(project=project)
+
+    state.apply_observation(observation)
+
+    assert (
+        state.observations[0].rendered_message
+        == (
+            "/home/jyotish/dev/aegisflow/"
+            "backend/observation/dashboard/state.py updated"
+        )
+    )
+
+    assert state.filesystem.workspace == Path(
+        "/home/jyotish/dev/aegisflow"
+    )
+    assert state.filesystem.event_type == "file.modified"
+    assert state.filesystem.last_activity == occurred_at
+
+
+def test_dashboard_state_applies_git_branch_observation() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    occurred_at = datetime.now()
+
+    observation = Observation(
+        provider=ProviderType.GIT,
+        observation_type="branch.changed",
+        occurred_at=occurred_at,
+        metadata=ObservationMetadata(
+            source="git",
+            attributes={
+                "workspace": "/home/jyotish/dev/aegisflow",
+                "repository": "/home/jyotish/dev/aegisflow",
+                "branch": "feature/observation-dashboard-v0",
+            },
+        ),
+    )
+
+    state = DashboardState(project=project)
+
+    state.apply_observation(observation)
+
+    assert (
+        state.git.branch
+        == "feature/observation-dashboard-v0"
+    )
+
+    assert (
+        state.git.repository
+        == "/home/jyotish/dev/aegisflow"
+    )
+
+    assert state.git.last_activity == occurred_at
+
+    assert (
+        state.observations[0].rendered_message
+        == "feature/observation-dashboard-v0 changed"
+    )
 
 
