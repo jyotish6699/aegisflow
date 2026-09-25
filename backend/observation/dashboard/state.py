@@ -139,11 +139,56 @@ class DashboardState:
         filesystem: FilesystemProviderState | None = None,
         observations: list[ObservationEntry] | None = None,
         terminal_log: list[TerminalLogEntry] | None = None,
+        max_observations: int = 100,
+        max_terminal_log: int = 200,
     ) -> None:
+        if max_observations <= 0:
+            raise ValueError(
+                "max_observations must be greater than zero"
+            )
+
+        if max_terminal_log <= 0:
+            raise ValueError(
+                "max_terminal_log must be greater than zero"
+            )
+
         self.project = project
         self.overall_status = overall_status
         self.git = git or GitProviderState()
         self.terminal = terminal or TerminalProviderState()
         self.filesystem = filesystem or FilesystemProviderState()
-        self.observations = observations or []
-        self.terminal_log = terminal_log or []
+
+        self.max_observations = max_observations
+        self.max_terminal_log = max_terminal_log
+
+        self.observations = list(observations or [])
+        self.terminal_log = list(terminal_log or [])
+
+        self._trim_observations()
+        self._trim_terminal_log()
+
+    def add_observation(
+        self,
+        observation: ObservationEntry,
+    ) -> None:
+        self.observations.append(observation)
+        self._trim_observations()
+
+    def add_terminal_log(
+        self,
+        entry: TerminalLogEntry,
+    ) -> None:
+        self.terminal_log.append(entry)
+        self._trim_terminal_log()
+
+    def _trim_observations(self) -> None:
+        excess = len(self.observations) - self.max_observations
+
+        if excess > 0:
+            del self.observations[:excess]
+
+    def _trim_terminal_log(self) -> None:
+        excess = len(self.terminal_log) - self.max_terminal_log
+
+        if excess > 0:
+            del self.terminal_log[:excess]

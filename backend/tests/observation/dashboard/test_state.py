@@ -133,3 +133,90 @@ def test_dashboard_state_contains_terminal_log() -> None:
         "pytest tests/observation/dashboard/test_state.py"
     )
 
+
+def test_dashboard_state_keeps_latest_observations() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(
+        project=project,
+        max_observations=3,
+    )
+
+    observations = [
+        ObservationEntry(
+            timestamp=datetime.now(),
+            provider="filesystem",
+            observation_type=f"file.modified.{index}",
+            rendered_message=f"file-{index}.py updated",
+        )
+        for index in range(5)
+    ]
+
+    for observation in observations:
+        state.add_observation(observation)
+
+    assert len(state.observations) == 3
+    assert state.observations == observations[-3:]
+
+
+def test_dashboard_state_keeps_latest_terminal_log_entries() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(
+        project=project,
+        max_terminal_log=2,
+    )
+
+    entries = [
+        TerminalLogEntry(
+            timestamp=datetime.now(),
+            message=f"command-{index}",
+        )
+        for index in range(4)
+    ]
+
+    for entry in entries:
+        state.add_terminal_log(entry)
+
+    assert len(state.terminal_log) == 2
+    assert state.terminal_log == entries[-2:]
+
+
+def test_dashboard_state_rejects_invalid_observation_limit() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    try:
+        DashboardState(
+            project=project,
+            max_observations=0,
+        )
+        assert False
+    except ValueError as exc:
+        assert str(exc) == "max_observations must be greater than zero"
+
+
+def test_dashboard_state_rejects_invalid_terminal_log_limit() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    try:
+        DashboardState(
+            project=project,
+            max_terminal_log=0,
+        )
+        assert False
+    except ValueError as exc:
+        assert str(exc) == "max_terminal_log must be greater than zero"
+
+
