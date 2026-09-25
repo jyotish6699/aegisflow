@@ -390,3 +390,136 @@ def test_dashboard_state_applies_git_branch_observation() -> None:
     )
 
 
+def test_dashboard_state_sets_provider_running() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.RUNNING,
+    )
+
+    assert state.git.status == ProviderStatus.RUNNING
+    assert state.git.reason is None
+    assert state.overall_status == DashboardStatus.RUNNING
+
+
+def test_dashboard_state_sets_provider_idle_with_reason() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    state.set_provider_status(
+        ProviderType.TERMINAL,
+        ProviderStatus.IDLE,
+        reason="terminal session is outside workspace",
+    )
+
+    assert state.terminal.status == ProviderStatus.IDLE
+    assert (
+        state.terminal.reason
+        == "terminal session is outside workspace"
+    )
+    assert state.overall_status == DashboardStatus.IDLE
+
+
+def test_dashboard_state_is_running_when_any_provider_is_running() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.RUNNING,
+    )
+
+    state.set_provider_status(
+        ProviderType.FILESYSTEM,
+        ProviderStatus.RUNNING,
+    )
+
+    state.set_provider_status(
+        ProviderType.TERMINAL,
+        ProviderStatus.IDLE,
+    )
+
+    assert state.git.status == ProviderStatus.RUNNING
+    assert state.filesystem.status == ProviderStatus.RUNNING
+    assert state.terminal.status == ProviderStatus.IDLE
+    assert state.overall_status == DashboardStatus.RUNNING
+
+
+def test_dashboard_state_becomes_idle_when_all_providers_are_idle() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.RUNNING,
+    )
+
+    state.set_provider_status(
+        ProviderType.FILESYSTEM,
+        ProviderStatus.RUNNING,
+    )
+
+    assert state.overall_status == DashboardStatus.RUNNING
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.IDLE,
+    )
+
+    assert state.overall_status == DashboardStatus.RUNNING
+
+    state.set_provider_status(
+        ProviderType.FILESYSTEM,
+        ProviderStatus.IDLE,
+    )
+
+    assert state.overall_status == DashboardStatus.IDLE
+
+
+def test_dashboard_state_status_change_preserves_provider_information() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+    )
+
+    state = DashboardState(project=project)
+
+    state.git.repository = "/home/jyotish/dev/aegisflow"
+    state.git.branch = "main"
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.RUNNING,
+    )
+
+    state.set_provider_status(
+        ProviderType.GIT,
+        ProviderStatus.IDLE,
+        reason="provider stopped",
+    )
+
+    assert state.git.repository == "/home/jyotish/dev/aegisflow"
+    assert state.git.branch == "main"
+    assert state.git.status == ProviderStatus.IDLE
+    assert state.git.reason == "provider stopped"
+
+
+

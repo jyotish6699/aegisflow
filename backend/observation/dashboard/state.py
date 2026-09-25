@@ -218,6 +218,52 @@ class DashboardState:
         elif observation.provider == ProviderType.GIT:
             self._apply_git_observation(observation)
 
+    def set_provider_status(
+        self,
+        provider: ProviderType,
+        status: ProviderStatus,
+        reason: str | None = None,
+    ) -> None:
+        provider_state = self._provider_state(provider)
+
+        provider_state.status = status
+        provider_state.reason = reason
+
+        self._update_overall_status()
+
+    def _provider_state(
+        self,
+        provider: ProviderType,
+    ) -> ProviderState:
+        if provider == ProviderType.GIT:
+            return self.git
+
+        if provider == ProviderType.TERMINAL:
+            return self.terminal
+
+        if provider == ProviderType.FILESYSTEM:
+            return self.filesystem
+
+        raise ValueError(
+            f"Unsupported provider: {provider}"
+        )
+
+    def _update_overall_status(self) -> None:
+        provider_states = (
+            self.git,
+            self.terminal,
+            self.filesystem,
+        )
+
+        if any(
+            provider.status == ProviderStatus.RUNNING
+            for provider in provider_states
+        ):
+            self.overall_status = DashboardStatus.RUNNING
+            return
+
+        self.overall_status = DashboardStatus.IDLE
+
     def _render_observation(
         self,
         observation: Observation,
