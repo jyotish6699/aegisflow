@@ -1,22 +1,139 @@
-from textual.widgets import Footer, Header, Static
+from pathlib import Path
 
+from observation.dashboard.state import (
+    DashboardState,
+    DashboardStatus,
+    FilesystemProviderState,
+    GitProviderState,
+    ProjectState,
+    ProviderStatus,
+    TerminalProviderState,
+)
 from observation.dashboard.ui.app import DashboardApp
 
 
-def test_dashboard_app_composes_required_shell() -> None:
-    app = DashboardApp()
+def create_dashboard_state() -> DashboardState:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
+        repository="aegisflow",
+    )
+
+    return DashboardState(
+        project=project,
+        overall_status=DashboardStatus.RUNNING,
+        git=GitProviderState(
+            status=ProviderStatus.RUNNING,
+            repository="aegisflow",
+            branch="feature/observation-dashboard-v0",
+        ),
+        terminal=TerminalProviderState(
+            status=ProviderStatus.RUNNING,
+            shell="zsh",
+            cwd=Path("/home/jyotish/dev/aegisflow"),
+            active_session=True,
+        ),
+        filesystem=FilesystemProviderState(
+            status=ProviderStatus.RUNNING,
+            workspace=Path("/home/jyotish/dev/aegisflow"),
+            event_type="file.modified",
+        ),
+    )
+
+
+def test_dashboard_app_renders_project_state() -> None:
+    state = create_dashboard_state()
+    app = DashboardApp(state)
 
     async def run_test() -> None:
         async with app.run_test():
-            assert app.query_one(Header)
-            assert app.query_one(Footer)
+            project_info = app.query_one("#project-info")
 
-            assert app.query_one("#project-info")
-            assert app.query_one("#git-provider")
-            assert app.query_one("#terminal-provider")
-            assert app.query_one("#filesystem-provider")
-            assert app.query_one("#observations")
-            assert app.query_one("#terminal-log")
+            assert "aegisflow" in str(project_info.render())
+            assert "/home/jyotish/dev/aegisflow" in str(
+                project_info.render()
+            )
+            assert "feature/observation-dashboard-v0" in str(
+                project_info.render()
+            )
+            assert "RUNNING" in str(project_info.render())
+
+    import asyncio
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_renders_provider_states() -> None:
+    state = create_dashboard_state()
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            git = app.query_one("#git-provider")
+            terminal = app.query_one("#terminal-provider")
+            filesystem = app.query_one("#filesystem-provider")
+
+            assert "RUNNING" in str(git.render())
+            assert "feature/observation-dashboard-v0" in str(
+                git.render()
+            )
+
+            assert "RUNNING" in str(terminal.render())
+            assert "zsh" in str(terminal.render())
+            assert "/home/jyotish/dev/aegisflow" in str(
+                terminal.render()
+            )
+
+            assert "RUNNING" in str(filesystem.render())
+            assert "file.modified" in str(filesystem.render())
+
+    import asyncio
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_renders_empty_observation_and_log_state() -> None:
+    state = create_dashboard_state()
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            observations = app.query_one("#observations")
+            terminal_log = app.query_one("#terminal-log")
+
+            assert "Waiting for observations..." in str(
+                observations.render()
+            )
+            assert "Waiting for terminal output..." in str(
+                terminal_log.render()
+            )
+
+    import asyncio
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_preserves_observation_and_terminal_log_content() -> None:
+    state = create_dashboard_state()
+
+    state.observations.append(
+        type(
+            "ObservationEntry",
+            (),
+            {"rendered_message": "main changed"},
+        )()
+    )
+    state.terminal_log.append("pytest executed")
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            observations = app.query_one("#observations")
+            terminal_log = app.query_one("#terminal-log")
+
+            assert "main changed" in str(observations.render())
+            assert "pytest executed" in str(terminal_log.render())
 
     import asyncio
 
