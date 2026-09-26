@@ -132,6 +132,31 @@ class DashboardApp(App):
 
         yield Footer()
 
+    def refresh_state(self) -> None:
+        self.query_one("#project-info", Static).update(
+            self._project_text()
+        )
+
+        self.query_one("#git-provider", Static).update(
+            self._git_text()
+        )
+
+        self.query_one("#terminal-provider", Static).update(
+            self._terminal_text()
+        )
+
+        self.query_one("#filesystem-provider", Static).update(
+            self._filesystem_text()
+        )
+
+        self.query_one("#observations", Static).update(
+            self._observation_text()
+        )
+
+        self.query_one("#terminal-log", Static).update(
+            self._terminal_log_text()
+        )
+
     def _project_text(self) -> str:
         project = self._state.project
 
