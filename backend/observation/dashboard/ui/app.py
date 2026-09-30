@@ -2,14 +2,18 @@ from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.events import Resize
 from textual.widgets import Footer, Header, Static
 
 from observation.dashboard.runtime import DashboardRuntimeBridge
 from observation.dashboard.state import (
     DashboardState,
     DashboardStatus,
+    FilesystemProviderState,
+    GitProviderState,
     ProjectState,
     ProviderStatus,
+    TerminalProviderState,
 )
 
 
@@ -22,12 +26,20 @@ class DashboardApp(App):
     }
 
     #project-header {
-        height: 9;
+        height: auto;
+        min-height: 5;
         border: round $accent;
         padding: 1 2;
     }
 
+    #project-title-row {
+        height: 1;
+        width: 100%;
+        align: left middle;
+    }
+
     #project-name {
+        width: 1fr;
         text-style: bold;
         height: 1;
     }
@@ -39,32 +51,33 @@ class DashboardApp(App):
     }
 
     #project-info {
-        height: 5;
-    }
-
-    #project-title {
-        width: 1fr;
-        text-style: bold;
+        height: auto;
+        margin-top: 1;
     }
 
     #overall-status {
         width: auto;
+        height: 1;
         text-style: bold;
-        padding: 0 2;
+        padding: 0 1;
     }
 
     #provider-status {
-        height: 8;
+        height: auto;
+        min-height: 7;
         border: round $accent;
         padding: 1 2;
     }
 
     #provider-cards {
-        height: 100%;
+        height: auto;
+        min-height: 4;
     }
 
     .provider-card {
+        height: auto;
         width: 1fr;
+        min-height: 4;
         border: round $panel;
         padding: 1 2;
     }
@@ -95,6 +108,62 @@ class DashboardApp(App):
         text-style: bold;
         margin-bottom: 1;
     }
+
+    /*
+     * Compact terminal layout.
+     *
+     * Activated when the terminal width is below the
+     * responsive threshold.
+     */
+
+    Screen.compact #provider-cards {
+        layout: vertical;
+    }
+
+    Screen.compact #terminal-area {
+        display: none;
+    }
+
+    Screen.compact .provider-card {
+        width: 100%;
+        min-height: 3;
+        padding: 0 1;
+    }
+
+    Screen.compact #provider-status {
+        min-height: 11;
+    }
+
+    Screen.compact #observation-area {
+        height: 1fr;
+    }
+
+    Screen.compact #observations {
+        height: 1fr;
+    }
+
+    /*
+     * Very small terminal layout.
+     *
+     * Keep the dashboard minimal without changing
+     * its information architecture.
+     */
+
+    Screen.compact.narrow #project-header {
+        padding: 1;
+    }
+
+    Screen.compact.narrow #provider-status {
+        padding: 1;
+    }
+
+    Screen.compact.narrow #project-info {
+        margin-top: 0;
+    }
+
+    Screen.compact.narrow .provider-card {
+        min-height: 3;
+    }
     """
 
     def __init__(
@@ -112,24 +181,19 @@ class DashboardApp(App):
         yield Header()
 
         with Vertical(id="project-header"):
-            yield Static(
-                "AEGISFLOW",
-                id="project-name",
-            )
-
-            yield Static(
-                "Real-time Project Observation",
-                id="project-subtitle",
-            )
+            with Horizontal(id="project-title-row"):
+                yield Static(
+                    self._state.project.name.upper(),
+                    id="project-name",
+                )
+                yield Static(
+                    self._overall_status_text(),
+                    id="overall-status",
+                )
 
             yield Static(
                 self._project_text(),
                 id="project-info",
-            )
-
-            yield Static(
-                self._overall_status_text(),
-                id="overall-status",
             )
 
         with Vertical(id="provider-status"):
@@ -162,7 +226,6 @@ class DashboardApp(App):
                 "LIVE OBSERVATIONS",
                 classes="section-title",
             )
-
             yield Static(
                 self._observation_text(),
                 id="observations",
@@ -173,7 +236,6 @@ class DashboardApp(App):
                 "TERMINAL LIVE LOG",
                 classes="section-title",
             )
-
             yield Static(
                 self._terminal_log_text(),
                 id="terminal-log",
@@ -182,6 +244,8 @@ class DashboardApp(App):
         yield Footer()
 
     async def on_mount(self) -> None:
+        self._update_responsive_layout()
+
         if self._bridge is None:
             return
 
@@ -191,6 +255,22 @@ class DashboardApp(App):
             0.1,
             self.refresh_state,
         )
+
+    def on_resize(self, event: Resize) -> None:
+        self._update_responsive_layout()
+
+    def _update_responsive_layout(self) -> None:
+        width = self.size.width
+
+        if width < 90:
+            self.screen.add_class("compact")
+        else:
+            self.screen.remove_class("compact")
+
+        if width < 60:
+            self.screen.add_class("narrow")
+        else:
+            self.screen.remove_class("narrow")
 
     async def on_unmount(self) -> None:
         if self._refresh_timer is not None:
