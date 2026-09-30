@@ -1,5 +1,7 @@
 from pathlib import Path
+import asyncio
 
+from observation.dashboard.runtime import DashboardRuntimeBridge
 from observation.dashboard.state import (
     DashboardState,
     DashboardStatus,
@@ -226,4 +228,65 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
 
     asyncio.run(run_test())
 
+
+def test_dashboard_app_starts_and_stops_runtime_bridge() -> None:
+    state = create_dashboard_state()
+
+    class FakeBridge:
+        def __init__(self) -> None:
+            self.started = False
+            self.stopped = False
+
+        async def start(self) -> None:
+            self.started = True
+
+        async def stop(self) -> None:
+            self.stopped = True
+
+    bridge = FakeBridge()
+
+    app = DashboardApp(
+        state=state,
+        bridge=bridge,
+    )
+
+    async def run_test() -> None:
+        async with app.run_test():
+            await asyncio.sleep(0)
+
+            assert bridge.started is True
+
+        assert bridge.stopped is True
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_refreshes_from_runtime_bridge() -> None:
+    state = create_dashboard_state()
+
+    class FakeBridge:
+        async def start(self) -> None:
+            state.git.branch = "main"
+            state.overall_status = DashboardStatus.RUNNING
+
+        async def stop(self) -> None:
+            pass
+
+    bridge = FakeBridge()
+
+    app = DashboardApp(
+        state=state,
+        bridge=bridge,
+    )
+
+    async def run_test() -> None:
+        async with app.run_test():
+            app.refresh_state()
+
+            project_info = app.query_one("#project-info")
+
+            assert "main" in str(project_info.render())
+            assert "RUNNING" in str(project_info.render())
+
+    asyncio.run(run_test())
 

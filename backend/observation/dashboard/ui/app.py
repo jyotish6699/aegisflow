@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, Static
 
+from observation.dashboard.runtime import DashboardRuntimeBridge
 from observation.dashboard.state import (
     DashboardState,
     DashboardStatus,
+    ProjectState,
     ProviderStatus,
 )
 
@@ -18,9 +22,35 @@ class DashboardApp(App):
     }
 
     #project-header {
-        height: 7;
+        height: 9;
         border: round $accent;
         padding: 1 2;
+    }
+
+    #project-name {
+        text-style: bold;
+        height: 1;
+    }
+
+    #project-subtitle {
+        color: $text-muted;
+        height: 1;
+        margin-bottom: 1;
+    }
+
+    #project-info {
+        height: 5;
+    }
+
+    #project-title {
+        width: 1fr;
+        text-style: bold;
+    }
+
+    #overall-status {
+        width: auto;
+        text-style: bold;
+        padding: 0 2;
     }
 
     #provider-status {
@@ -67,22 +97,39 @@ class DashboardApp(App):
     }
     """
 
-    def __init__(self, state: DashboardState) -> None:
+    def __init__(
+        self,
+        state: DashboardState,
+        bridge: DashboardRuntimeBridge | None = None,
+    ) -> None:
         super().__init__()
+
         self._state = state
+        self._bridge = bridge
+        self._refresh_timer = None
 
     def compose(self) -> ComposeResult:
         yield Header()
 
         with Vertical(id="project-header"):
             yield Static(
-                "AEGISFLOW\n"
-                "Real-time Project Observation",
-                classes="section-title",
+                "AEGISFLOW",
+                id="project-name",
             )
+
+            yield Static(
+                "Real-time Project Observation",
+                id="project-subtitle",
+            )
+
             yield Static(
                 self._project_text(),
                 id="project-info",
+            )
+
+            yield Static(
+                self._overall_status_text(),
+                id="overall-status",
             )
 
         with Vertical(id="provider-status"):
@@ -115,6 +162,7 @@ class DashboardApp(App):
                 "LIVE OBSERVATIONS",
                 classes="section-title",
             )
+
             yield Static(
                 self._observation_text(),
                 id="observations",
@@ -125,6 +173,7 @@ class DashboardApp(App):
                 "TERMINAL LIVE LOG",
                 classes="section-title",
             )
+
             yield Static(
                 self._terminal_log_text(),
                 id="terminal-log",
@@ -132,9 +181,32 @@ class DashboardApp(App):
 
         yield Footer()
 
+    async def on_mount(self) -> None:
+        if self._bridge is None:
+            return
+
+        await self._bridge.start()
+
+        self._refresh_timer = self.set_interval(
+            0.1,
+            self.refresh_state,
+        )
+
+    async def on_unmount(self) -> None:
+        if self._refresh_timer is not None:
+            self._refresh_timer.pause()
+            self._refresh_timer = None
+
+        if self._bridge is not None:
+            await self._bridge.stop()
+
     def refresh_state(self) -> None:
         self.query_one("#project-info", Static).update(
             self._project_text()
+        )
+
+        self.query_one("#overall-status", Static).update(
+            self._overall_status_text()
         )
 
         self.query_one("#git-provider", Static).update(
@@ -161,14 +233,19 @@ class DashboardApp(App):
         project = self._state.project
 
         repository = project.repository or "--"
+        branch = self._state.git.branch or "--"
+        status = self._state.overall_status.value.upper()
 
         return (
-            f"Project: {project.name}\n"
-            f"Path: {project.path}\n"
-            f"Repository: {repository}\n"
-            f"Branch: {self._state.git.branch or '--'}\n"
-            f"Overall: {self._state.overall_status.value.upper()}"
+            f"Project    {project.name}\n"
+            f"Path       {project.path}\n"
+            f"Repository {repository}\n"
+            f"Branch     {branch}\n"
+            f"Status     {status}"
         )
+
+    def _overall_status_text(self) -> str:
+        return f"● {self._state.overall_status.value.upper()}"
 
     def _git_text(self) -> str:
         return (
@@ -225,7 +302,9 @@ class DashboardApp(App):
             return "Waiting for terminal output..."
 
         return "\n".join(
-            entry
+            entry.message
+            if hasattr(entry, "message")
+            else str(entry)
             for entry in self._state.terminal_log
         )
 
@@ -235,10 +314,6 @@ class DashboardApp(App):
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-
-    from observation.dashboard.state import ProjectState
-
     state = DashboardState(
         project=ProjectState(
             name=Path.cwd().name,
@@ -248,3 +323,4 @@ if __name__ == "__main__":
     )
 
     DashboardApp(state).run()
+    
