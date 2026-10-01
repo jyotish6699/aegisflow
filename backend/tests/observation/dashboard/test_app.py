@@ -60,8 +60,6 @@ def test_dashboard_app_renders_project_state() -> None:
             )
             assert "RUNNING" in str(project_info.render())
 
-    import asyncio
-
     asyncio.run(run_test())
 
 
@@ -89,8 +87,6 @@ def test_dashboard_app_renders_provider_states() -> None:
             assert "RUNNING" in str(filesystem.render())
             assert "file.modified" in str(filesystem.render())
 
-    import asyncio
-
     asyncio.run(run_test())
 
 
@@ -101,16 +97,15 @@ def test_dashboard_app_renders_empty_observation_and_log_state() -> None:
     async def run_test() -> None:
         async with app.run_test():
             observations = app.query_one("#observations")
+
             terminal_log = app.query_one("#terminal-log")
 
-            assert "Waiting for observations..." in str(
-                observations.render()
-            )
+            assert not state.observations
+            assert observations is not None
+
             assert "Waiting for terminal output..." in str(
                 terminal_log.render()
             )
-
-    import asyncio
 
     asyncio.run(run_test())
 
@@ -125,6 +120,7 @@ def test_dashboard_app_preserves_observation_and_terminal_log_content() -> None:
             {"rendered_message": "main changed"},
         )()
     )
+
     state.terminal_log.append("pytest executed")
 
     app = DashboardApp(state)
@@ -134,10 +130,10 @@ def test_dashboard_app_preserves_observation_and_terminal_log_content() -> None:
             observations = app.query_one("#observations")
             terminal_log = app.query_one("#terminal-log")
 
-            assert "main changed" in str(observations.render())
-            assert "pytest executed" in str(terminal_log.render())
-
-    import asyncio
+            assert "main changed" in str(observations.lines)
+            assert "pytest executed" in str(
+                terminal_log.render()
+            )
 
     asyncio.run(run_test())
 
@@ -161,8 +157,6 @@ def test_dashboard_app_refreshes_project_and_git_state() -> None:
             assert "main" in str(project_info.render())
             assert "IDLE" in str(project_info.render())
             assert "main" in str(git.render())
-
-    import asyncio
 
     asyncio.run(run_test())
 
@@ -192,8 +186,6 @@ def test_dashboard_app_refreshes_provider_states() -> None:
             assert "IDLE" in str(filesystem.render())
             assert "file.deleted" in str(filesystem.render())
 
-    import asyncio
-
     asyncio.run(run_test())
 
 
@@ -210,6 +202,7 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
                     {"rendered_message": "src/main.py updated"},
                 )()
             )
+
             state.terminal_log.append("pytest executed")
 
             app.refresh_state()
@@ -218,13 +211,12 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
             terminal_log = app.query_one("#terminal-log")
 
             assert "src/main.py updated" in str(
-                observations.render()
+                observations.lines
             )
+
             assert "pytest executed" in str(
                 terminal_log.render()
             )
-
-    import asyncio
 
     asyncio.run(run_test())
 
@@ -290,3 +282,89 @@ def test_dashboard_app_refreshes_from_runtime_bridge() -> None:
 
     asyncio.run(run_test())
 
+
+def test_dashboard_app_appends_only_new_observations() -> None:
+    state = create_dashboard_state()
+
+    state.observations.append(
+        type(
+            "ObservationEntry",
+            (),
+            {"rendered_message": "first observation"},
+        )()
+    )
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            observations = app.query_one("#observations")
+
+            assert "first observation" in str(
+                observations.lines
+            )
+
+            state.observations.append(
+                type(
+                    "ObservationEntry",
+                    (),
+                    {"rendered_message": "second observation"},
+                )()
+            )
+
+            app.refresh_state()
+
+            rendered = str(observations.lines)
+
+            assert "first observation" in rendered
+            assert "second observation" in rendered
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_handles_observation_buffer_trimming() -> None:
+    state = create_dashboard_state()
+
+    state.max_observations = 2
+
+    first = type(
+        "ObservationEntry",
+        (),
+        {"rendered_message": "first"},
+    )()
+
+    second = type(
+        "ObservationEntry",
+        (),
+        {"rendered_message": "second"},
+    )()
+
+    third = type(
+        "ObservationEntry",
+        (),
+        {"rendered_message": "third"},
+    )()
+
+    state.observations.extend(
+        [first, second]
+    )
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            observations = app.query_one("#observations")
+
+            assert "first" in str(observations.lines)
+            assert "second" in str(observations.lines)
+
+            state.observations = [second, third]
+
+            app.refresh_state()
+
+            rendered = str(observations.lines)
+
+            assert "second" in rendered
+            assert "third" in rendered
+
+    asyncio.run(run_test())

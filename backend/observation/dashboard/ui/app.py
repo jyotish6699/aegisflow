@@ -3,7 +3,7 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.events import Resize
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Footer, Header, RichLog, Static
 
 from observation.dashboard.runtime import DashboardRuntimeBridge
 from observation.dashboard.state import (
@@ -44,22 +44,16 @@ class DashboardApp(App):
         height: 1;
     }
 
-    #project-subtitle {
-        color: $text-muted;
-        height: 1;
-        margin-bottom: 1;
-    }
-
-    #project-info {
-        height: auto;
-        margin-top: 1;
-    }
-
     #overall-status {
         width: auto;
         height: 1;
         text-style: bold;
         padding: 0 1;
+    }
+
+    #project-info {
+        height: auto;
+        margin-top: 1;
     }
 
     #provider-status {
@@ -90,7 +84,6 @@ class DashboardApp(App):
         height: 1fr;
         border: round $accent;
         padding: 1 2;
-        overflow-y: auto;
     }
 
     #terminal-area {
@@ -108,13 +101,6 @@ class DashboardApp(App):
         text-style: bold;
         margin-bottom: 1;
     }
-
-    /*
-     * Compact terminal layout.
-     *
-     * Activated when the terminal width is below the
-     * responsive threshold.
-     */
 
     Screen.compact #provider-cards {
         layout: vertical;
@@ -141,13 +127,6 @@ class DashboardApp(App):
     Screen.compact #observations {
         height: 1fr;
     }
-
-    /*
-     * Very small terminal layout.
-     *
-     * Keep the dashboard minimal without changing
-     * its information architecture.
-     */
 
     Screen.compact.narrow #project-header {
         padding: 1;
@@ -176,6 +155,9 @@ class DashboardApp(App):
         self._state = state
         self._bridge = bridge
         self._refresh_timer = None
+
+        self._rendered_observation_ids: set[int] = set()
+        self._observation_placeholder_visible = True
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -226,9 +208,11 @@ class DashboardApp(App):
                 "LIVE OBSERVATIONS",
                 classes="section-title",
             )
-            yield Static(
-                self._observation_text(),
+
+            yield RichLog(
                 id="observations",
+                wrap=False,
+                auto_scroll=True,
             )
 
         with Vertical(id="terminal-area"):
@@ -236,6 +220,7 @@ class DashboardApp(App):
                 "TERMINAL LIVE LOG",
                 classes="section-title",
             )
+
             yield Static(
                 self._terminal_log_text(),
                 id="terminal-log",
@@ -245,6 +230,8 @@ class DashboardApp(App):
 
     async def on_mount(self) -> None:
         self._update_responsive_layout()
+
+        self._sync_observations()
 
         if self._bridge is None:
             return
@@ -301,13 +288,48 @@ class DashboardApp(App):
             self._filesystem_text()
         )
 
-        self.query_one("#observations", Static).update(
-            self._observation_text()
-        )
+        self._sync_observations()
 
         self.query_one("#terminal-log", Static).update(
             self._terminal_log_text()
         )
+
+    def _sync_observations(self) -> None:
+        log = self.query_one("#observations", RichLog)
+
+        current_ids = {
+            id(observation)
+            for observation in self._state.observations
+        }
+
+        self._rendered_observation_ids.intersection_update(
+            current_ids
+        )
+
+        if self._state.observations:
+            if self._observation_placeholder_visible:
+                log.clear()
+                self._observation_placeholder_visible = False
+
+            for observation in self._state.observations:
+                observation_id = id(observation)
+
+                if observation_id in self._rendered_observation_ids:
+                    continue
+
+                log.write(observation.rendered_message)
+                self._rendered_observation_ids.add(
+                    observation_id
+                )
+
+            log.scroll_end(animate=False)
+
+            return
+
+        if not self._observation_placeholder_visible:
+            log.clear()
+            log.write("Waiting for observations...")
+            self._observation_placeholder_visible = True
 
     def _project_text(self) -> str:
         project = self._state.project
@@ -368,15 +390,6 @@ class DashboardApp(App):
             f"Event: {event}"
         )
 
-    def _observation_text(self) -> str:
-        if not self._state.observations:
-            return "Waiting for observations..."
-
-        return "\n".join(
-            observation.rendered_message
-            for observation in self._state.observations
-        )
-
     def _terminal_log_text(self) -> str:
         if not self._state.terminal_log:
             return "Waiting for terminal output..."
@@ -403,4 +416,3 @@ if __name__ == "__main__":
     )
 
     DashboardApp(state).run()
-    
