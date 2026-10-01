@@ -368,3 +368,85 @@ def test_dashboard_app_handles_observation_buffer_trimming() -> None:
             assert "third" in rendered
 
     asyncio.run(run_test())
+
+
+def test_dashboard_app_formats_observation_with_timestamp_and_provider() -> None:
+    from datetime import datetime
+
+    state = create_dashboard_state()
+
+    state.observations.append(
+        type(
+            "ObservationEntry",
+            (),
+            {
+                "timestamp": datetime(
+                    2026,
+                    10,
+                    1,
+                    23,
+                    54,
+                    2,
+                ),
+                "provider": "filesystem",
+                "rendered_message": "src/main.py updated",
+            },
+        )()
+    )
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            observations = app.query_one("#observations")
+
+            rendered = str(observations.lines)
+
+            assert "23:54:02" in rendered
+            assert "FILESYSTEM" in rendered
+            assert "src/main.py updated" in rendered
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_preserves_actual_observation_message() -> None:
+    from datetime import datetime
+
+    state = create_dashboard_state()
+
+    actual_command = "pytest tests/observation/dashboard/test_app.py -v"
+
+    state.observations.append(
+        type(
+            "ObservationEntry",
+            (),
+            {
+                "timestamp": datetime(
+                    2026,
+                    10,
+                    1,
+                    23,
+                    55,
+                    10,
+                ),
+                "provider": "terminal",
+                "rendered_message": (
+                    f"{actual_command} executed successfully"
+                ),
+            },
+        )()
+    )
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test():
+            observations = app.query_one("#observations")
+
+            rendered = str(observations.lines)
+
+            assert actual_command in rendered
+            assert "executed successfully" in rendered
+
+    asyncio.run(run_test())
+    

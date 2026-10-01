@@ -317,7 +317,9 @@ class DashboardApp(App):
                 if observation_id in self._rendered_observation_ids:
                     continue
 
-                log.write(observation.rendered_message)
+                log.write(
+                    self._format_observation(observation)
+                )
                 self._rendered_observation_ids.add(
                     observation_id
                 )
@@ -344,6 +346,30 @@ class DashboardApp(App):
             f"Repository {repository}\n"
             f"Branch     {branch}\n"
             f"Status     {status}"
+        )
+
+    def _format_observation(self, observation) -> str:
+        rendered_message = observation.rendered_message
+
+        timestamp = getattr(
+            observation,
+            "timestamp",
+            None,
+        )
+
+        provider = getattr(
+            observation,
+            "provider",
+            None,
+        )
+
+        if timestamp is None or provider is None:
+            return rendered_message
+
+        return (
+            f"{timestamp.strftime('%H:%M:%S')}  "
+            f"{provider.upper():<11} "
+            f"{rendered_message}"
         )
 
     def _overall_status_text(self) -> str:
