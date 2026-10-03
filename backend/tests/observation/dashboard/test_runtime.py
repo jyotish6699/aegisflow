@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -221,5 +222,69 @@ async def test_bridge_consumes_real_filesystem_observation(
         observation.rendered_message
         == f"{target} new created"
         for observation in state.observations
+    )
+
+
+@pytest.mark.asyncio
+async def test_bridge_consumes_real_git_observation(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    subprocess.run(
+        ["git", "init", str(repository)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    terminal_protocol = tmp_path / "terminal.jsonl"
+
+    runtime = create_observation_runtime(
+        workspace=repository,
+        terminal_protocol=terminal_protocol,
+    )
+
+    state = DashboardState(
+        project=ProjectState(
+            name=repository.name,
+            path=repository,
+        )
+    )
+
+    bridge = DashboardRuntimeBridge(
+        runtime=runtime,
+        state=state,
+    )
+
+    await bridge.start()
+
+    for _ in range(50):
+        if any(
+            observation.observation_type
+            == "repository.detected"
+            for observation in state.observations
+        ):
+            break
+
+        await asyncio.sleep(0.02)
+
+    await bridge.stop()
+
+    assert any(
+        observation.observation_type
+        == "repository.detected"
+        for observation in state.observations
+    )
+
+    assert any(
+        observation.rendered_message
+        == f"{repository.resolve()} repository detected"
+        for observation in state.observations
+    )
+
+    assert state.git.repository == str(
+        repository.resolve()
     )
     
