@@ -287,4 +287,66 @@ async def test_bridge_consumes_real_git_observation(
     assert state.git.repository == str(
         repository.resolve()
     )
+
+
+@pytest.mark.asyncio
+async def test_bridge_consumes_real_terminal_observation(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    terminal_protocol = tmp_path / "terminal.jsonl"
+
+    runtime = create_observation_runtime(
+        workspace=workspace,
+        terminal_protocol=terminal_protocol,
+    )
+
+    state = DashboardState(
+        project=ProjectState(
+            name=workspace.name,
+            path=workspace,
+        )
+    )
+
+    bridge = DashboardRuntimeBridge(
+        runtime=runtime,
+        state=state,
+    )
+
+    await bridge.start()
+
+    terminal_protocol.write_text(
+        '{"type":"command.completed",'
+        '"command_id":"test-command",'
+        '"command":"echo hello",'
+        f'"cwd":"{workspace}",'
+        '"exit_code":0,'
+        '"duration":0.01}\n'
+    )
+
+    for _ in range(50):
+        if any(
+            observation.observation_type
+            == "command.completed"
+            for observation in state.observations
+        ):
+            break
+
+        await asyncio.sleep(0.02)
+
+    await bridge.stop()
+
+    assert any(
+        observation.observation_type
+        == "command.completed"
+        for observation in state.observations
+    )
+
+    assert any(
+        observation.rendered_message
+        == "echo hello executed successfully"
+        for observation in state.observations
+    )
     
