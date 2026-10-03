@@ -12,6 +12,9 @@ from observation.dashboard.state import (
     DashboardState,
     ProjectState,
 )
+from observation.dashboard.composition import (
+    create_observation_runtime,
+)
 
 
 class FakeRuntime:
@@ -165,4 +168,58 @@ async def test_bridge_starts_and_stops_runtime() -> None:
     await bridge.stop()
 
     assert runtime.stopped is True
+
+
+@pytest.mark.asyncio
+async def test_bridge_consumes_real_filesystem_observation(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    terminal_protocol = tmp_path / "terminal.jsonl"
+
+    runtime = create_observation_runtime(
+        workspace=workspace,
+        terminal_protocol=terminal_protocol,
+    )
+
+    state = DashboardState(
+        project=ProjectState(
+            name=workspace.name,
+            path=workspace,
+        )
+    )
+
+    bridge = DashboardRuntimeBridge(
+        runtime=runtime,
+        state=state,
+    )
+
+    await bridge.start()
+
+    target = workspace / "dashboard_probe.txt"
+    target.write_text("aegisflow")
+
+    for _ in range(50):
+        if any(
+            observation.observation_type == "file.created"
+            for observation in state.observations
+        ):
+            break
+
+        await asyncio.sleep(0.02)
+
+    await bridge.stop()
+
+    assert any(
+        observation.observation_type == "file.created"
+        for observation in state.observations
+    )
+
+    assert any(
+        observation.rendered_message
+        == f"{target} new created"
+        for observation in state.observations
+    )
     
