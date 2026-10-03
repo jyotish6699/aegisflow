@@ -28,15 +28,17 @@ class DashboardRuntimeBridge:
         if self._task is not None and not self._task.done():
             return
 
+        await self._runtime.start()
+
         self._task = asyncio.create_task(
             self.consume()
         )
 
     async def stop(self) -> None:
+        await self._runtime.stop()
+
         if self._task is None:
             return
-
-        self._task.cancel()
 
         await asyncio.gather(
             self._task,

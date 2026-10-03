@@ -134,4 +134,35 @@ async def test_bridge_processes_multiple_runtime_observations() -> None:
     )
 
     assert state.git.branch == "main"
+
+
+@pytest.mark.asyncio
+async def test_bridge_starts_and_stops_runtime() -> None:
+    class LifecycleRuntime(FakeRuntime):
+        def __init__(self) -> None:
+            super().__init__([])
+            self.started = False
+            self.stopped = False
+
+        async def start(self) -> None:
+            self.started = True
+
+        async def stop(self) -> None:
+            self.stopped = True
+
+    runtime = LifecycleRuntime()
+    state = create_state()
+
+    bridge = DashboardRuntimeBridge(
+        runtime=runtime,
+        state=state,
+    )
+
+    await bridge.start()
+
+    assert runtime.started is True
+
+    await bridge.stop()
+
+    assert runtime.stopped is True
     
