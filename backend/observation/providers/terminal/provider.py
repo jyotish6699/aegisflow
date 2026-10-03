@@ -1,3 +1,4 @@
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -45,61 +46,74 @@ class TerminalProvider(ObservationProvider):
 
     async def observe(self) -> AsyncIterator[Observation]:
         """
-        Consume newly written terminal protocol messages and
-        convert them into canonical Observation objects.
+        Continuously consume newly written terminal protocol messages.
         """
-        if not self._started:
-            return
-
-        if not self._protocol.exists():
-            return
-
-        lines = self._protocol.read_text().splitlines()
-
-        new_lines = lines[self._offset :]
-        self._offset = len(lines)
-
-        for line in new_lines:
-            if not line.strip():
+        while self._started:
+            if not self._protocol.exists():
+                await asyncio.sleep(0.05)
                 continue
 
             try:
-                message = json.loads(line)
-            except json.JSONDecodeError:
+                lines = self._protocol.read_text().splitlines()
+            except OSError:
+                await asyncio.sleep(0.05)
                 continue
 
-            observation_type = message.get("type")
+            if self._offset > len(lines):
+                self._offset = 0
 
-            if observation_type not in {
-                "command.started",
-                "command.completed",
-            }:
-                continue
+            new_lines = lines[self._offset:]
+            self._offset = len(lines)
 
-            yield Observation(
-                provider=ProviderType.TERMINAL,
-                observation_type=observation_type,
-                metadata=ObservationMetadata(
-                    source="terminal",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "command_id": message["command_id"],
-                        "command": message["command"],
-                        "cwd": message["cwd"],
-                        **{
-                            key: value
-                            for key, value in message.items()
-                            if key
-                            not in {
-                                "type",
-                                "command_id",
-                                "command",
-                                "cwd",
-                            }
+            for line in new_lines:
+                if not line.strip():
+                    continue
+
+                try:
+                    message = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                observation_type = message.get("type")
+
+                if observation_type not in {
+                    "command.started",
+                    "command.completed",
+                }:
+                    continue
+
+                cwd = Path(message["cwd"]).resolve()
+
+                try:
+                    cwd.relative_to(self._workspace)
+                except ValueError:
+                    continue
+
+                yield Observation(
+                    provider=ProviderType.TERMINAL,
+                    observation_type=observation_type,
+                    metadata=ObservationMetadata(
+                        source="terminal",
+                        attributes={
+                            "workspace": str(self._workspace),
+                            "command_id": message["command_id"],
+                            "command": message["command"],
+                            "cwd": str(cwd),
+                            **{
+                                key: value
+                                for key, value in message.items()
+                                if key not in {
+                                    "type",
+                                    "command_id",
+                                    "command",
+                                    "cwd",
+                                }
+                            },
                         },
-                    },
-                ),
-            )
+                    ),
+                )
+
+            await asyncio.sleep(0.05)
 
     async def stop(self) -> None:
         """
