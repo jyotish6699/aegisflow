@@ -95,7 +95,9 @@ def test_dashboard_app_renders_empty_observation_and_log_state() -> None:
     app = DashboardApp(state)
 
     async def run_test() -> None:
-        async with app.run_test():
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+
             observations = app.query_one("#observations")
 
             terminal_log = app.query_one("#terminal-log")
@@ -104,7 +106,7 @@ def test_dashboard_app_renders_empty_observation_and_log_state() -> None:
             assert observations is not None
 
             assert "Waiting for terminal output..." in str(
-                terminal_log.render()
+                terminal_log.lines
             )
 
     asyncio.run(run_test())
@@ -126,13 +128,13 @@ def test_dashboard_app_preserves_observation_and_terminal_log_content() -> None:
     app = DashboardApp(state)
 
     async def run_test() -> None:
-        async with app.run_test():
+        async with app.run_test(size=(120, 40)):
             observations = app.query_one("#observations")
             terminal_log = app.query_one("#terminal-log")
 
             assert "main changed" in str(observations.lines)
             assert "pytest executed" in str(
-                terminal_log.render()
+                terminal_log.lines
             )
 
     asyncio.run(run_test())
@@ -194,7 +196,7 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
     app = DashboardApp(state)
 
     async def run_test() -> None:
-        async with app.run_test():
+        async with app.run_test(size=(120, 40)) as pilot:
             state.observations.append(
                 type(
                     "ObservationEntry",
@@ -206,6 +208,7 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
             state.terminal_log.append("pytest executed")
 
             app.refresh_state()
+            await pilot.pause()
 
             observations = app.query_one("#observations")
             terminal_log = app.query_one("#terminal-log")
@@ -215,7 +218,7 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
             )
 
             assert "pytest executed" in str(
-                terminal_log.render()
+                terminal_log.lines
             )
 
     asyncio.run(run_test())

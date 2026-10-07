@@ -6,6 +6,7 @@ from textual.events import Resize
 from textual.widgets import Footer, Header, RichLog, Static
 
 from observation.dashboard.runtime import DashboardRuntimeBridge
+from observation.dashboard.composition import create_observation_runtime
 from observation.dashboard.state import (
     DashboardState,
     DashboardStatus,
@@ -26,10 +27,9 @@ class DashboardApp(App):
     }
 
     #project-header {
-        height: auto;
-        min-height: 5;
+        height: 6;
         border: round $accent;
-        padding: 1 2;
+        padding: 0 2;
     }
 
     #project-title-row {
@@ -57,10 +57,9 @@ class DashboardApp(App):
     }
 
     #provider-status {
-        height: auto;
-        min-height: 7;
+        height: 8;
         border: round $accent;
-        padding: 1 2;
+        padding: 0 2;
     }
 
     #provider-cards {
@@ -77,17 +76,25 @@ class DashboardApp(App):
     }
 
     #observation-area {
-        height: 1fr;
+        height: 2fr;
+        min-height: 10;
     }
 
     #observations {
         height: 1fr;
         border: round $accent;
-        padding: 1 2;
+        padding: 0 1;
     }
 
     #terminal-area {
         height: 1fr;
+        min-height: 7;
+    }
+
+    #terminal-log {
+        height: 1fr;
+        border: round $accent;
+        padding: 0 1;
     }
 
     #terminal-log {
@@ -157,7 +164,10 @@ class DashboardApp(App):
         self._refresh_timer = None
 
         self._rendered_observation_ids: set[int] = set()
+        self._rendered_terminal_log_ids: set[int] = set()
+
         self._observation_placeholder_visible = True
+        self._terminal_log_placeholder_visible = True
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -221,9 +231,10 @@ class DashboardApp(App):
                 classes="section-title",
             )
 
-            yield Static(
-                self._terminal_log_text(),
+            yield RichLog(
                 id="terminal-log",
+                wrap=False,
+                auto_scroll=True,
             )
 
         yield Footer()
@@ -232,6 +243,7 @@ class DashboardApp(App):
         self._update_responsive_layout()
 
         self._sync_observations()
+        self._sync_terminal_log()
 
         if self._bridge is None:
             return
@@ -246,6 +258,14 @@ class DashboardApp(App):
     def on_resize(self, event: Resize) -> None:
         self._update_responsive_layout()
 
+    async def on_unmount(self) -> None:
+        if self._refresh_timer is not None:
+            self._refresh_timer.pause()
+            self._refresh_timer = None
+
+        if self._bridge is not None:
+            await self._bridge.stop()
+
     def _update_responsive_layout(self) -> None:
         width = self.size.width
 
@@ -258,14 +278,6 @@ class DashboardApp(App):
             self.screen.add_class("narrow")
         else:
             self.screen.remove_class("narrow")
-
-    async def on_unmount(self) -> None:
-        if self._refresh_timer is not None:
-            self._refresh_timer.pause()
-            self._refresh_timer = None
-
-        if self._bridge is not None:
-            await self._bridge.stop()
 
     def refresh_state(self) -> None:
         self.query_one("#project-info", Static).update(
@@ -289,10 +301,7 @@ class DashboardApp(App):
         )
 
         self._sync_observations()
-
-        self.query_one("#terminal-log", Static).update(
-            self._terminal_log_text()
-        )
+        self._sync_terminal_log()
 
     def _sync_observations(self) -> None:
         log = self.query_one("#observations", RichLog)
@@ -416,16 +425,42 @@ class DashboardApp(App):
             f"Event: {event}"
         )
 
-    def _terminal_log_text(self) -> str:
-        if not self._state.terminal_log:
-            return "Waiting for terminal output..."
+    def _sync_terminal_log(self) -> None:
+        log = self.query_one("#terminal-log", RichLog)
 
-        return "\n".join(
-            entry.message
-            if hasattr(entry, "message")
-            else str(entry)
+        current_ids = {
+            id(entry)
             for entry in self._state.terminal_log
+        }
+
+        self._rendered_terminal_log_ids.intersection_update(
+            current_ids
         )
+
+        if self._state.terminal_log:
+            if self._terminal_log_placeholder_visible:
+                log.clear()
+                self._terminal_log_placeholder_visible = False
+
+            for entry in self._state.terminal_log:
+                entry_id = id(entry)
+
+                if entry_id in self._rendered_terminal_log_ids:
+                    continue
+
+                log.write(str(entry))
+
+                self._rendered_terminal_log_ids.add(entry_id)
+
+            log.scroll_end(animate=False)
+            return
+
+        if not self._terminal_log_placeholder_visible:
+            log.clear()
+            self._terminal_log_placeholder_visible = True
+
+        if not log.lines:
+            log.write("Waiting for terminal output...")
 
     @staticmethod
     def _status_text(status: ProviderStatus) -> str:
@@ -433,12 +468,28 @@ class DashboardApp(App):
 
 
 if __name__ == "__main__":
+    workspace = Path.cwd().resolve()
+    terminal_protocol = Path("/tmp/aegisflow-terminal.jsonl")
+
+    runtime = create_observation_runtime(
+        workspace=workspace,
+        terminal_protocol=terminal_protocol,
+    )
+
     state = DashboardState(
         project=ProjectState(
-            name=Path.cwd().name,
-            path=Path.cwd(),
+            name=workspace.name,
+            path=workspace,
         ),
         overall_status=DashboardStatus.IDLE,
     )
 
-    DashboardApp(state).run()
+    bridge = DashboardRuntimeBridge(
+        runtime=runtime,
+        state=state,
+    )
+
+    DashboardApp(
+        state=state,
+        bridge=bridge,
+    ).run()
