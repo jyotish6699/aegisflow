@@ -15,16 +15,18 @@ async def collect_observation(
     deadline = asyncio.get_running_loop().time() + timeout
 
     while asyncio.get_running_loop().time() < deadline:
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        remaining = deadline - asyncio.get_running_loop().time()
 
-        for observation in observations:
-            if observation.observation_type == observation_type:
-                return observation
+        try:
+            observation = await asyncio.wait_for(
+                anext(provider.observe()),
+                timeout=remaining,
+            )
+        except (asyncio.TimeoutError, StopAsyncIteration):
+            return None
 
-        await asyncio.sleep(0.01)
+        if observation.observation_type == observation_type:
+            return observation
 
     return None
 

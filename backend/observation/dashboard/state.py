@@ -433,6 +433,10 @@ class DashboardState:
             self.git.repository = attributes.get(
                 "repository"
             )
+            branch = attributes.get("branch")
+
+            if branch is not None:
+                self.git.branch = branch
 
     def _trim_observations(self) -> None:
         excess = len(self.observations) - self.max_observations

@@ -8,6 +8,10 @@ from observation.logging.runtime import ObservationRuntime
 from observation.core.metadata import ObservationMetadata
 from observation.core.observation import Observation
 from observation.core.provider import ObservationProvider, ProviderType
+from observation.lifecycle.health import (
+    ProviderHealth,
+    ProviderHealthTracker,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -23,6 +27,31 @@ def test_runtime_owns_resolved_workspace(tmp_path: Path) -> None:
     )
 
     assert runtime.workspace == workspace.resolve()
+
+
+def test_runtime_exposes_provider_health_snapshot(
+    tmp_path: Path,
+) -> None:
+    health = ProviderHealthTracker()
+    health.set_state(
+        ProviderType.GIT,
+        ProviderHealth.RUNNING,
+    )
+
+    runtime = ObservationRuntime(
+        workspace=tmp_path,
+        providers=[],
+        starter=Mock(),
+        stopper=Mock(),
+        health=health,
+    )
+
+    snapshot = runtime.provider_health()
+    snapshot[ProviderType.GIT] = ProviderHealth.FAILED
+
+    assert runtime.provider_health()[ProviderType.GIT] == (
+        ProviderHealth.RUNNING
+    )
 
 
 class FakeProvider(ObservationProvider):
@@ -186,11 +215,22 @@ async def test_runtime_isolates_provider_failure(
         return_value=[]
     )
 
+    health = ProviderHealthTracker()
+    health.set_state(
+        ProviderType.GIT,
+        ProviderHealth.RUNNING,
+    )
+    health.set_state(
+        ProviderType.FILESYSTEM,
+        ProviderHealth.RUNNING,
+    )
+
     runtime = ObservationRuntime(
         tmp_path,
         [failing, healthy],
         starter,
         stopper,
+        health=health,
     )
 
     await runtime.start()
@@ -209,6 +249,15 @@ async def test_runtime_isolates_provider_failure(
 
     assert first.provider == ProviderType.GIT
     assert second.provider == ProviderType.FILESYSTEM
+
+    await asyncio.sleep(0)
+
+    assert runtime.provider_health()[ProviderType.GIT] == (
+        ProviderHealth.FAILED
+    )
+    assert runtime.provider_health()[ProviderType.FILESYSTEM] == (
+        ProviderHealth.RUNNING
+    )
 
     healthy_release.set()
 
@@ -351,5 +400,3 @@ async def test_runtime_observe_exits_when_stopped(
     assert runtime._observation_tasks == []
     assert not runtime._started
     assert runtime._stopped
-
-

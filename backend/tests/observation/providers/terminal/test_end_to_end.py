@@ -54,10 +54,15 @@ def test_terminal_provider_end_to_end_for_successful_command(
         await provider.initialize()
         await provider.start()
 
-        return [
-            observation
-            async for observation in provider.observe()
-        ]
+        observation_stream = provider.observe()
+        try:
+            return [
+                await anext(observation_stream),
+                await anext(observation_stream),
+            ]
+        finally:
+            await provider.stop()
+            await observation_stream.aclose()
 
     observations = asyncio.run(
         collect_observations(protocol)
@@ -152,10 +157,15 @@ def test_terminal_provider_end_to_end_for_failed_command(
         await provider.initialize()
         await provider.start()
 
-        return [
-            observation
-            async for observation in provider.observe()
-        ]
+        observation_stream = provider.observe()
+        try:
+            return [
+                await anext(observation_stream),
+                await anext(observation_stream),
+            ]
+        finally:
+            await provider.stop()
+            await observation_stream.aclose()
 
     observations = asyncio.run(
         collect_observations(protocol)

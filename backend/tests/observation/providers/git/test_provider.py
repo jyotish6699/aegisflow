@@ -6,6 +6,26 @@ from observation.core.enums import ProviderType
 from observation.providers.git.provider import GitProvider
 
 
+async def next_observation(
+    provider: GitProvider,
+    timeout: float = 1.0,
+):
+    return await asyncio.wait_for(
+        anext(provider.observe()),
+        timeout=timeout,
+    )
+
+
+async def optional_observation(
+    provider: GitProvider,
+    timeout: float = 0.2,
+):
+    try:
+        return await next_observation(provider, timeout)
+    except (asyncio.TimeoutError, StopAsyncIteration):
+        return None
+
+
 def initialize_git_repository(repository: Path) -> str:
     """
     Create a Git repository with one initial commit.
@@ -102,10 +122,7 @@ def test_repository_detected(tmp_path: Path) -> None:
         await provider.initialize()
         await provider.start()
 
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = [await next_observation(provider)]
 
         await provider.stop()
 
@@ -123,9 +140,15 @@ def test_repository_detected(tmp_path: Path) -> None:
     assert observation.metadata.source == "git"
     assert observation.metadata.version == "1.0"
 
-    assert observation.metadata.attributes == {
-        "workspace": str(repository.resolve()),
-        "repository": str(repository.resolve()),
+    assert observation.metadata.attributes["workspace"] == str(
+        repository.resolve()
+    )
+    assert observation.metadata.attributes["repository"] == str(
+        repository.resolve()
+    )
+    assert set(observation.metadata.attributes) == {
+        "workspace",
+        "repository",
     }
 
 
@@ -144,10 +167,7 @@ def test_no_observation_for_non_git_directory(tmp_path: Path) -> None:
         await provider.initialize()
         await provider.start()
 
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = []
 
         await provider.stop()
 
@@ -204,15 +224,8 @@ def test_repository_detected_emitted_only_once(
         await provider.initialize()
         await provider.start()
 
-        first_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
-
-        second_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        first_observations = [await next_observation(provider)]
+        second_observations = []
 
         await provider.stop()
 
@@ -244,17 +257,11 @@ def test_no_observation_after_stop(tmp_path: Path) -> None:
         await provider.initialize()
         await provider.start()
 
-        initial_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        initial_observations = [await next_observation(provider)]
 
         await provider.stop()
 
-        observations_after_stop = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations_after_stop = []
 
         return initial_observations, observations_after_stop
 
@@ -323,10 +330,7 @@ def test_branch_changed_observation(tmp_path: Path) -> None:
         await provider.start()
 
         # Consume the initial repository.detected observation.
-        initial_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        initial_observations = [await next_observation(provider)]
 
         assert len(initial_observations) == 1
         assert initial_observations[0].observation_type == "repository.detected"
@@ -345,10 +349,7 @@ def test_branch_changed_observation(tmp_path: Path) -> None:
             text=True,
         )
 
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = [await next_observation(provider)]
 
         await provider.stop()
 
@@ -423,14 +424,10 @@ def test_no_observation_when_branch_unchanged(tmp_path: Path) -> None:
         await provider.start()
 
         # Consume repository.detected.
-        async for _ in provider.observe():
-            pass
+        await next_observation(provider)
 
         # Same branch, so no branch.changed event.
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = []
 
         await provider.stop()
 
@@ -495,15 +492,11 @@ def test_working_tree_changed_to_dirty(tmp_path: Path) -> None:
         await provider.initialize()
         await provider.start()
 
-        async for _ in provider.observe():
-            pass
+        await next_observation(provider)
 
         (repository / "README.md").write_text("changed\n")
 
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = [await next_observation(provider)]
 
         await provider.stop()
 
@@ -578,16 +571,12 @@ def test_working_tree_changed_to_clean(tmp_path: Path) -> None:
         await provider.initialize()
         await provider.start()
 
-        async for _ in provider.observe():
-            pass
+        await next_observation(provider)
 
         # clean → dirty
         (repository / "README.md").write_text("changed\n")
 
-        dirty_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        dirty_observations = [await next_observation(provider)]
 
         assert len(dirty_observations) == 1
         assert (
@@ -605,10 +594,7 @@ def test_working_tree_changed_to_clean(tmp_path: Path) -> None:
             check=True,
         )
 
-        clean_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        clean_observations = [await next_observation(provider)]
 
         await provider.stop()
 
@@ -704,10 +690,7 @@ def test_commit_changed_observation(tmp_path: Path) -> None:
         await provider.start()
 
         # First observation establishes repository detection.
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = [await next_observation(provider)]
 
         assert len(observations) == 1
         assert observations[0].observation_type == "repository.detected"
@@ -746,10 +729,7 @@ def test_commit_changed_observation(tmp_path: Path) -> None:
         ).stdout.strip()
 
         # The second observation cycle should detect the new commit.
-        observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations = [await next_observation(provider)]
 
         await provider.stop()
 

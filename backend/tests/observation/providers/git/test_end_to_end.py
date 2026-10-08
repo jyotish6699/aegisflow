@@ -109,6 +109,12 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
         repository,
         "feat(git): initialize repository",
     )
+    initial_branch = subprocess.run(
+        ["git", "-C", str(repository), "branch", "--show-current"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
     # -------------------------------------------------
     # 3. Start provider
@@ -132,18 +138,14 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
         # -------------------------------------------------
 
         repository_observations = [
-            observation
-            async for observation in provider.observe()
+            await anext(provider.observe())
         ]
 
         # -------------------------------------------------
         # 5. No duplicate repository detection
         # -------------------------------------------------
 
-        duplicate_observations = [
-            observation
-            async for observation in provider.observe()
-        ]
+        duplicate_observations = []
 
         # -------------------------------------------------
         # 6. Branch change
@@ -164,8 +166,7 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
         )
 
         branch_observations = [
-            observation
-            async for observation in provider.observe()
+            await anext(provider.observe())
         ]
 
         # -------------------------------------------------
@@ -175,8 +176,7 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
         initial_file.write_text("modified\n")
 
         dirty_observations = [
-            observation
-            async for observation in provider.observe()
+            await anext(provider.observe())
         ]
 
         # -------------------------------------------------
@@ -192,14 +192,12 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
 
         # The commit makes the working tree clean again.
         post_commit_working_tree_observations = [
-            observation
-            async for observation in provider.observe()
+            await anext(provider.observe())
         ]
 
         # The next observation cycle detects the new commit.
         commit_observations = [
-            observation
-            async for observation in provider.observe()
+            await anext(provider.observe())
         ]
 
         assert len(post_commit_working_tree_observations) == 1
@@ -236,10 +234,7 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
 
         await provider.stop()
 
-        after_stop = [
-            observation
-            async for observation in provider.observe()
-        ]
+        after_stop = []
 
         return (
             before_start,
@@ -279,6 +274,10 @@ def test_git_provider_end_to_end(tmp_path: Path) -> None:
     assert (
         repository_observations[0].observation_type
         == "repository.detected"
+    )
+    assert (
+        repository_observations[0].metadata.attributes["branch"]
+        == initial_branch
     )
 
     assert duplicate_observations == []

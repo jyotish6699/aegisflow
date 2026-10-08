@@ -1,3 +1,5 @@
+import asyncio
+
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -76,104 +78,124 @@ class GitProvider(ObservationProvider):
         # -------------------------------------------------
 
         if not self._repository_observation_emitted:
+            attributes = {
+                "workspace": str(self._workspace),
+                "repository": str(self._repository_path),
+            }
+
+            if self._state is not None:
+                attributes.update(
+                    {
+                        "branch": self._state.branch,
+                        "working_tree_clean": (
+                            self._state.working_tree_clean
+                        ),
+                        "commit": self._state.commit,
+                        "commit_message": self._state.commit_message,
+                    }
+                )
+
             observation = Observation(
                 provider=ProviderType.GIT,
                 observation_type="repository.detected",
                 metadata=ObservationMetadata(
                     source="git",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "repository": str(self._repository_path),
-                    },
+                    attributes=attributes,
                 ),
             )
 
             self._repository_observation_emitted = True
 
             yield observation
-            return
 
-        # -------------------------------------------------
-        # Branch Change Detection
-        # -------------------------------------------------
+        while self._started:
+            try:
+                current_state = GitState.read(self._repository_path)
+            except GitStateUnavailableError:
+                self._state = None
+                await asyncio.sleep(0.1)
+                continue
 
-        try:
-            current_state = GitState.read(self._repository_path)
-        except GitStateUnavailableError:
-            self._state = None
-            return
+            if self._state is None:
+                self._state = current_state
+                await asyncio.sleep(0.1)
+                continue
 
-        if self._state is None:
+            if current_state.branch != self._state.branch:
+                observation = Observation(
+                    provider=ProviderType.GIT,
+                    observation_type="branch.changed",
+                    metadata=ObservationMetadata(
+                        source="git",
+                        attributes={
+                            "workspace": str(self._workspace),
+                            "repository": str(self._repository_path),
+                            "branch": current_state.branch,
+                        },
+                    ),
+                )
+
+                self._state = self._state.model_copy(
+                    update={"branch": current_state.branch}
+                )
+
+                yield observation
+                continue
+
+            if (
+                current_state.working_tree_clean
+                != self._state.working_tree_clean
+            ):
+                observation = Observation(
+                    provider=ProviderType.GIT,
+                    observation_type="working_tree.changed",
+                    metadata=ObservationMetadata(
+                        source="git",
+                        attributes={
+                            "workspace": str(self._workspace),
+                            "repository": str(self._repository_path),
+                            "working_tree_clean": (
+                                current_state.working_tree_clean
+                            ),
+                        },
+                    ),
+                )
+
+                self._state = self._state.model_copy(
+                    update={
+                        "working_tree_clean": (
+                            current_state.working_tree_clean
+                        )
+                    }
+                )
+
+                yield observation
+                continue
+
+            if current_state.commit != self._state.commit:
+                observation = Observation(
+                    provider=ProviderType.GIT,
+                    observation_type="commit.changed",
+                    metadata=ObservationMetadata(
+                        source="git",
+                        attributes={
+                            "workspace": str(self._workspace),
+                            "repository": str(self._repository_path),
+                            "commit": current_state.commit,
+                            "commit_message": (
+                                current_state.commit_message
+                            ),
+                        },
+                    ),
+                )
+
+                self._state = current_state
+
+                yield observation
+                continue
+
             self._state = current_state
-            return
-
-        if current_state.branch != self._state.branch:
-            observation = Observation(
-                provider=ProviderType.GIT,
-                observation_type="branch.changed",
-                metadata=ObservationMetadata(
-                    source="git",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "repository": str(self._repository_path),
-                        "branch": current_state.branch,
-                    },
-                ),
-            )
-
-            self._state = self._state.model_copy(
-                update={
-                    "branch": current_state.branch,
-                }
-            )
-
-            yield observation
-            return
-
-        if current_state.working_tree_clean != self._state.working_tree_clean:
-            observation = Observation(
-                provider=ProviderType.GIT,
-                observation_type="working_tree.changed",
-                metadata=ObservationMetadata(
-                    source="git",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "repository": str(self._repository_path),
-                        "working_tree_clean": current_state.working_tree_clean,
-                    },
-                ),
-            )
-
-            self._state = self._state.model_copy(
-                update={
-                    "working_tree_clean": current_state.working_tree_clean,
-                }
-            )
-
-            yield observation
-            return
-
-        if current_state.commit != self._state.commit:
-            observation = Observation(
-                provider=ProviderType.GIT,
-                observation_type="commit.changed",
-                metadata=ObservationMetadata(
-                    source="git",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "repository": str(self._repository_path),
-                        "commit": current_state.commit,
-                        "commit_message": current_state.commit_message,
-                    },
-                ),
-            )
-
-            self._state = current_state
-
-            yield observation
-            return
-
-        self._state = current_state
+            await asyncio.sleep(0.1)
 
     async def stop(self) -> None:
         """

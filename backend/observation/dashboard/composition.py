@@ -68,4 +68,5 @@ def create_observation_runtime(
         providers=providers,
         starter=starter,
         stopper=stopper,
+        health=health,
     )

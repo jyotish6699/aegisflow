@@ -25,10 +25,7 @@ class FilesystemProvider(ObservationProvider):
 
         self._watcher: FilesystemWatcher | None = None
 
-        self._last_event_key: tuple[FilesystemEventType, Path] | None = None
-
         self._started = False
-        
 
     @property
     def provider_type(self) -> ProviderType:
@@ -42,7 +39,6 @@ class FilesystemProvider(ObservationProvider):
         Observation does not begin during initialization.
         """
         self._watcher = FilesystemWatcher(self._workspace)
-        self._last_event_key = None
 
     async def start(self) -> None:
         """
@@ -65,54 +61,26 @@ class FilesystemProvider(ObservationProvider):
         if self._watcher is None:
             return
 
-        event = await asyncio.to_thread(
-            self._watcher.get_event_blocking
-        )
-
-        if event is None:
-            return
-
-        event_key = (
-            event.event_type,
-            event.path,
-        )
-
-        if event_key == self._last_event_key:
-            return
-
-        self._last_event_key = event_key
-
-        if event.event_type == FilesystemEventType.CREATED:
-            yield Observation(
-                provider=ProviderType.FILESYSTEM,
-                observation_type="file.created",
-                metadata=ObservationMetadata(
-                    source="filesystem",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "path": str(event.path),
-                    },
-                ),
-            )
-            return
-
-        if event.event_type == FilesystemEventType.MODIFIED:
-            yield Observation(
-                provider=ProviderType.FILESYSTEM,
-                observation_type="file.modified",
-                metadata=ObservationMetadata(
-                    source="filesystem",
-                    attributes={
-                        "workspace": str(self._workspace),
-                        "path": str(event.path),
-                    },
-                ),
+        while self._started:
+            event = await asyncio.to_thread(
+                self._watcher.get_event_blocking
             )
 
-        if event.event_type == FilesystemEventType.DELETED:
+            if event is None:
+                continue
+
+            observation_type = {
+                FilesystemEventType.CREATED: "file.created",
+                FilesystemEventType.MODIFIED: "file.modified",
+                FilesystemEventType.DELETED: "file.deleted",
+            }.get(event.event_type)
+
+            if observation_type is None:
+                continue
+
             yield Observation(
                 provider=ProviderType.FILESYSTEM,
-                observation_type="file.deleted",
+                observation_type=observation_type,
                 metadata=ObservationMetadata(
                     source="filesystem",
                     attributes={
@@ -130,5 +98,4 @@ class FilesystemProvider(ObservationProvider):
             self._watcher.stop()
 
         self._watcher = None
-        self._last_event_key = None
         self._started = False
