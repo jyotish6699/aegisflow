@@ -90,7 +90,7 @@ def test_dashboard_app_renders_provider_states() -> None:
     asyncio.run(run_test())
 
 
-def test_dashboard_app_renders_empty_observation_and_log_state() -> None:
+def test_dashboard_app_renders_empty_observation_state() -> None:
     state = create_dashboard_state()
     app = DashboardApp(state)
 
@@ -100,19 +100,17 @@ def test_dashboard_app_renders_empty_observation_and_log_state() -> None:
 
             observations = app.query_one("#observations")
 
-            terminal_log = app.query_one("#terminal-log")
-
             assert not state.observations
             assert observations is not None
 
-            assert "Waiting for terminal output..." in str(
-                terminal_log.lines
+            assert "Waiting for observations..." in str(
+                observations.lines
             )
 
     asyncio.run(run_test())
 
 
-def test_dashboard_app_preserves_observation_and_terminal_log_content() -> None:
+def test_dashboard_app_preserves_observation_content() -> None:
     state = create_dashboard_state()
 
     state.observations.append(
@@ -123,19 +121,115 @@ def test_dashboard_app_preserves_observation_and_terminal_log_content() -> None:
         )()
     )
 
-    state.terminal_log.append("pytest executed")
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test(size=(120, 40)):
+            observations = app.query_one("#observations")
+            assert "main changed" in str(observations.lines)
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_has_one_observation_stream() -> None:
+    state = create_dashboard_state()
+    state.observations.append(
+        type(
+            "ObservationEntry",
+            (),
+            {"rendered_message": "[stdout] HELLO"},
+        )()
+    )
 
     app = DashboardApp(state)
 
     async def run_test() -> None:
         async with app.run_test(size=(120, 40)):
             observations = app.query_one("#observations")
-            terminal_log = app.query_one("#terminal-log")
 
-            assert "main changed" in str(observations.lines)
-            assert "pytest executed" in str(
-                terminal_log.lines
+            assert "[stdout] HELLO" in str(observations.lines)
+            assert not app.query("#terminal-log")
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_preserves_manual_observation_scroll() -> None:
+    state = create_dashboard_state()
+    state.observations.extend(
+        type(
+            "ObservationEntry",
+            (),
+            {"rendered_message": f"observation-{index}"},
+        )()
+        for index in range(30)
+    )
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test(size=(80, 20)) as pilot:
+            observations = app.query_one("#observations")
+            observations.scroll_home(animate=False, immediate=True)
+            state.observations.append(
+                type(
+                    "ObservationEntry",
+                    (),
+                    {"rendered_message": "new observation"},
+                )()
             )
+
+            app.refresh_state()
+
+            assert observations.scroll_y == 0
+
+            observations.scroll_end(animate=False, immediate=True)
+            await pilot.pause()
+            state.observations.append(
+                type(
+                    "ObservationEntry",
+                    (),
+                    {"rendered_message": "latest observation"},
+                )()
+            )
+            app.refresh_state()
+            await pilot.pause()
+
+            assert observations.is_vertical_scroll_end
+
+    asyncio.run(run_test())
+
+
+def test_dashboard_app_removes_evicted_observations_from_log() -> None:
+    state = create_dashboard_state()
+    state.max_observations = 2
+    state.observations.extend(
+        type(
+            "ObservationEntry",
+            (),
+            {"rendered_message": f"observation-{index}"},
+        )()
+        for index in range(2)
+    )
+
+    app = DashboardApp(state)
+
+    async def run_test() -> None:
+        async with app.run_test(size=(80, 20)):
+            state.add_observation(
+                type(
+                    "ObservationEntry",
+                    (),
+                    {"rendered_message": "observation-2"},
+                )()
+            )
+            app.refresh_state()
+
+            observations = app.query_one("#observations")
+            rendered = str(observations.lines)
+
+            assert "observation-0" not in rendered
+            assert "observation-1" in rendered
+            assert "observation-2" in rendered
 
     asyncio.run(run_test())
 
@@ -191,7 +285,7 @@ def test_dashboard_app_refreshes_provider_states() -> None:
     asyncio.run(run_test())
 
 
-def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
+def test_dashboard_app_refreshes_observations() -> None:
     state = create_dashboard_state()
     app = DashboardApp(state)
 
@@ -205,20 +299,12 @@ def test_dashboard_app_refreshes_observations_and_terminal_log() -> None:
                 )()
             )
 
-            state.terminal_log.append("pytest executed")
-
             app.refresh_state()
             await pilot.pause()
 
             observations = app.query_one("#observations")
-            terminal_log = app.query_one("#terminal-log")
-
             assert "src/main.py updated" in str(
                 observations.lines
-            )
-
-            assert "pytest executed" in str(
-                terminal_log.lines
             )
 
     asyncio.run(run_test())

@@ -57,15 +57,6 @@ class ObservationEntry:
         self.rendered_message = rendered_message
 
 
-class TerminalLogEntry:
-    def __init__(
-        self,
-        timestamp: datetime,
-        message: str,
-    ) -> None:
-        self.timestamp = timestamp
-        self.message = message
-
 class GitProviderState(ProviderState):
     def __init__(
         self,
@@ -145,16 +136,6 @@ class ObservationSnapshot:
         self.rendered_message = rendered_message
 
 
-class TerminalLogSnapshot:
-    def __init__(
-        self,
-        timestamp: datetime,
-        message: str,
-    ) -> None:
-        self.timestamp = timestamp
-        self.message = message
-
-
 class DashboardSnapshot:
     def __init__(
         self,
@@ -164,7 +145,6 @@ class DashboardSnapshot:
         terminal: TerminalProviderState,
         filesystem: FilesystemProviderState,
         observations: list[ObservationSnapshot],
-        terminal_log: list[TerminalLogSnapshot],
     ) -> None:
         self.project = project
         self.overall_status = overall_status
@@ -172,7 +152,6 @@ class DashboardSnapshot:
         self.terminal = terminal
         self.filesystem = filesystem
         self.observations = observations
-        self.terminal_log = terminal_log
 
 class DashboardState:
     def __init__(
@@ -183,18 +162,11 @@ class DashboardState:
         terminal: TerminalProviderState | None = None,
         filesystem: FilesystemProviderState | None = None,
         observations: list[ObservationEntry] | None = None,
-        terminal_log: list[TerminalLogEntry] | None = None,
         max_observations: int = 100,
-        max_terminal_log: int = 200,
     ) -> None:
         if max_observations <= 0:
             raise ValueError(
                 "max_observations must be greater than zero"
-            )
-
-        if max_terminal_log <= 0:
-            raise ValueError(
-                "max_terminal_log must be greater than zero"
             )
 
         self.project = project
@@ -204,13 +176,10 @@ class DashboardState:
         self.filesystem = filesystem or FilesystemProviderState()
 
         self.max_observations = max_observations
-        self.max_terminal_log = max_terminal_log
 
         self.observations = list(observations or [])
-        self.terminal_log = list(terminal_log or [])
 
         self._trim_observations()
-        self._trim_terminal_log()
 
     def add_observation(
         self,
@@ -218,13 +187,6 @@ class DashboardState:
     ) -> None:
         self.observations.append(observation)
         self._trim_observations()
-
-    def add_terminal_log(
-        self,
-        entry: TerminalLogEntry,
-    ) -> None:
-        self.terminal_log.append(entry)
-        self._trim_terminal_log()
 
     def apply_observation(
         self,
@@ -245,13 +207,6 @@ class DashboardState:
 
         if observation.provider == ProviderType.TERMINAL:
             self._apply_terminal_observation(observation)
-
-            self.add_terminal_log(
-                TerminalLogEntry(
-                    timestamp=observation.occurred_at,
-                    message=rendered_message,
-                )
-            )
 
         elif observation.provider == ProviderType.FILESYSTEM:
             self._apply_filesystem_observation(
@@ -332,6 +287,11 @@ class DashboardState:
                     )
 
                 return f"{command} executed"
+
+            if observation.observation_type == "terminal.output":
+                stream = attributes.get("stream", "stdout")
+                text = attributes.get("text", "")
+                return f"[{stream}] {text}"
 
         if observation.provider == ProviderType.FILESYSTEM:
             path = attributes.get("path", "")
@@ -444,12 +404,6 @@ class DashboardState:
         if excess > 0:
             del self.observations[:excess]
 
-    def _trim_terminal_log(self) -> None:
-        excess = len(self.terminal_log) - self.max_terminal_log
-
-        if excess > 0:
-            del self.terminal_log[:excess]
-
     def snapshot(self) -> DashboardSnapshot:
         return DashboardSnapshot(
             project=ProjectState(
@@ -491,12 +445,5 @@ class DashboardState:
                     rendered_message=entry.rendered_message,
                 )
                 for entry in self.observations
-            ],
-            terminal_log=[
-                TerminalLogSnapshot(
-                    timestamp=entry.timestamp,
-                    message=entry.message,
-                )
-                for entry in self.terminal_log
             ],
         )

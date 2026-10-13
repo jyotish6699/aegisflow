@@ -19,6 +19,7 @@ from observation.registry.registry import ProviderRegistry
 def create_observation_runtime(
     workspace: Path,
     terminal_protocol: Path,
+    terminal_capture_endpoint: Path | None = None,
 ) -> ObservationRuntime:
     discovered = discover_providers(
         [
@@ -31,6 +32,7 @@ def create_observation_runtime(
     factory = ProviderFactory(
         workspace=workspace,
         terminal_protocol=terminal_protocol,
+        terminal_capture_endpoint=terminal_capture_endpoint,
     )
 
     registry = ProviderRegistry()

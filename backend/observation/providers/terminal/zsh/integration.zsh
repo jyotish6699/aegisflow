@@ -7,6 +7,7 @@ _aegisflow_command=""
 _aegisflow_cwd=""
 _aegisflow_started_at=""
 _aegisflow_internal=1
+_aegisflow_session_id="${AEGISFLOW_SESSION_ID:-zsh-$$-${RANDOM}}"
 
 
 _aegisflow_emit_started() {
@@ -110,7 +111,44 @@ _aegisflow_preexec() {
         return
     fi
 
+    case "$1" in
+        aegisflow_capture\ *|_aegisflow_capture\ *)
+            return
+            ;;
+    esac
+
     _aegisflow_emit_started "$1"
+}
+
+
+aegisflow_capture() {
+    local command="$*"
+
+    if [[ -z "${AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT:-}" ]]; then
+        print -u2 \
+            "aegisflow_capture: AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT is not set"
+        return 2
+    fi
+
+    if [[ -z "$command" ]]; then
+        print -u2 "aegisflow_capture: expected a command string"
+        return 2
+    fi
+
+    local shell_executable
+    shell_executable="$(command -v zsh)" || return 127
+
+    _aegisflow_internal=1
+    python3 -m observation.providers.terminal.capture.helper \
+        --endpoint "$AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT" \
+        --session-id "$_aegisflow_session_id" \
+        --command-id "${EPOCHREALTIME}-${RANDOM}" \
+        --shell "$shell_executable" \
+        --cwd "$PWD" \
+        "$command"
+    local exit_code=$?
+    _aegisflow_internal=0
+    return "$exit_code"
 }
 
 

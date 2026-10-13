@@ -151,6 +151,74 @@ async def test_bridge_processes_multiple_runtime_observations() -> None:
 
 
 @pytest.mark.asyncio
+async def test_bridge_delivers_terminal_output_to_dashboard_state() -> None:
+    observations = [
+        create_observation(
+            ProviderType.TERMINAL,
+            "command.started",
+            {
+                "command_id": "command-1",
+                "command": "printf",
+                "cwd": "/home/jyotish/dev/aegisflow",
+                "session_id": "session-1",
+                "sequence": 1,
+            },
+        ),
+        create_observation(
+            ProviderType.TERMINAL,
+            "terminal.output",
+            {
+                "command_id": "command-1",
+                "cwd": "/home/jyotish/dev/aegisflow",
+                "session_id": "session-1",
+                "sequence": 2,
+                "stream": "stdout",
+                "text": "hello\n",
+            },
+        ),
+        create_observation(
+            ProviderType.TERMINAL,
+            "terminal.output",
+            {
+                "command_id": "command-1",
+                "cwd": "/home/jyotish/dev/aegisflow",
+                "session_id": "session-1",
+                "sequence": 3,
+                "stream": "stderr",
+                "text": "error\n",
+            },
+        ),
+        create_observation(
+            ProviderType.TERMINAL,
+            "command.completed",
+            {
+                "command_id": "command-1",
+                "command": "printf",
+                "cwd": "/home/jyotish/dev/aegisflow",
+                "session_id": "session-1",
+                "sequence": 4,
+                "exit_code": 0,
+            },
+        ),
+    ]
+
+    state = create_state()
+    await DashboardRuntimeBridge(
+        FakeRuntime(observations),
+        state,
+    ).consume()
+
+    assert [
+        entry.rendered_message for entry in state.observations
+    ] == [
+        "printf started",
+        "[stdout] hello\n",
+        "[stderr] error\n",
+        "printf executed successfully",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_bridge_starts_and_stops_runtime() -> None:
     class LifecycleRuntime(FakeRuntime):
         def __init__(self) -> None:
@@ -324,7 +392,7 @@ async def test_bridge_consumes_real_filesystem_observation(
     target = workspace / "dashboard_probe.txt"
     target.write_text("aegisflow")
 
-    for _ in range(50):
+    for _ in range(200):
         if any(
             observation.observation_type == "file.created"
             for observation in state.observations
@@ -386,7 +454,7 @@ async def test_bridge_consumes_real_git_observation(
 
     await bridge.start()
 
-    for _ in range(50):
+    for _ in range(200):
         if any(
             observation.observation_type
             == "repository.detected"

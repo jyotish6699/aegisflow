@@ -79,9 +79,8 @@ def test_adapter_applies_terminal_observation() -> None:
     adapter.apply(observation)
 
     assert len(state.observations) == 1
-    assert len(state.terminal_log) == 1
     assert (
-        state.terminal_log[0].message
+        state.observations[0].rendered_message
         == "pytest executed successfully"
     )
 

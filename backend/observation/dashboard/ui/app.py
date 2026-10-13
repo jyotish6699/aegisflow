@@ -86,24 +86,6 @@ class DashboardApp(App):
         padding: 0 1;
     }
 
-    #terminal-area {
-        height: 1fr;
-        min-height: 7;
-    }
-
-    #terminal-log {
-        height: 1fr;
-        border: round $accent;
-        padding: 0 1;
-    }
-
-    #terminal-log {
-        height: 1fr;
-        border: round $accent;
-        padding: 1 2;
-        overflow-y: auto;
-    }
-
     .section-title {
         text-style: bold;
         margin-bottom: 1;
@@ -111,10 +93,6 @@ class DashboardApp(App):
 
     Screen.compact #provider-cards {
         layout: vertical;
-    }
-
-    Screen.compact #terminal-area {
-        display: none;
     }
 
     Screen.compact .provider-card {
@@ -164,10 +142,7 @@ class DashboardApp(App):
         self._refresh_timer = None
 
         self._rendered_observation_ids: set[int] = set()
-        self._rendered_terminal_log_ids: set[int] = set()
-
         self._observation_placeholder_visible = True
-        self._terminal_log_placeholder_visible = True
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -225,25 +200,12 @@ class DashboardApp(App):
                 auto_scroll=True,
             )
 
-        with Vertical(id="terminal-area"):
-            yield Static(
-                "TERMINAL LIVE LOG",
-                classes="section-title",
-            )
-
-            yield RichLog(
-                id="terminal-log",
-                wrap=False,
-                auto_scroll=True,
-            )
-
         yield Footer()
 
     async def on_mount(self) -> None:
         self._update_responsive_layout()
 
         self._sync_observations()
-        self._sync_terminal_log()
 
         if self._bridge is None:
             return
@@ -301,19 +263,24 @@ class DashboardApp(App):
         )
 
         self._sync_observations()
-        self._sync_terminal_log()
 
     def _sync_observations(self) -> None:
         log = self.query_one("#observations", RichLog)
+        follow_live = log.is_vertical_scroll_end
+        previous_scroll_y = log.scroll_y
 
         current_ids = {
             id(observation)
             for observation in self._state.observations
         }
 
-        self._rendered_observation_ids.intersection_update(
-            current_ids
+        removed_ids = (
+            self._rendered_observation_ids - current_ids
         )
+        if removed_ids:
+            log.clear()
+            self._rendered_observation_ids.clear()
+            self._observation_placeholder_visible = False
 
         if self._state.observations:
             if self._observation_placeholder_visible:
@@ -333,14 +300,19 @@ class DashboardApp(App):
                     observation_id
                 )
 
-            log.scroll_end(animate=False)
+            if follow_live:
+                log.scroll_end(animate=False)
+            elif removed_ids:
+                log.scroll_y = previous_scroll_y
 
             return
 
         if not self._observation_placeholder_visible:
             log.clear()
-            log.write("Waiting for observations...")
             self._observation_placeholder_visible = True
+
+        if not log.lines:
+            log.write("Waiting for observations...")
 
     def _project_text(self) -> str:
         project = self._state.project
@@ -424,43 +396,6 @@ class DashboardApp(App):
             f"Workspace: {workspace}\n"
             f"Event: {event}"
         )
-
-    def _sync_terminal_log(self) -> None:
-        log = self.query_one("#terminal-log", RichLog)
-
-        current_ids = {
-            id(entry)
-            for entry in self._state.terminal_log
-        }
-
-        self._rendered_terminal_log_ids.intersection_update(
-            current_ids
-        )
-
-        if self._state.terminal_log:
-            if self._terminal_log_placeholder_visible:
-                log.clear()
-                self._terminal_log_placeholder_visible = False
-
-            for entry in self._state.terminal_log:
-                entry_id = id(entry)
-
-                if entry_id in self._rendered_terminal_log_ids:
-                    continue
-
-                log.write(str(entry))
-
-                self._rendered_terminal_log_ids.add(entry_id)
-
-            log.scroll_end(animate=False)
-            return
-
-        if not self._terminal_log_placeholder_visible:
-            log.clear()
-            self._terminal_log_placeholder_visible = True
-
-        if not log.lines:
-            log.write("Waiting for terminal output...")
 
     @staticmethod
     def _status_text(status: ProviderStatus) -> str:

@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import os
 from pathlib import Path
 
 from observation.core.provider import ObservationProvider
@@ -20,9 +21,22 @@ class ProviderFactory:
         self,
         workspace: Path,
         terminal_protocol: Path,
+        terminal_capture_endpoint: Path | None = None,
     ) -> None:
         self._workspace = workspace.resolve()
         self._terminal_protocol = terminal_protocol.resolve()
+        self._terminal_capture_endpoint = (
+            terminal_capture_endpoint.resolve()
+            if terminal_capture_endpoint is not None
+            else (
+                Path(os.environ["AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT"])
+                .resolve()
+                if os.environ.get(
+                    "AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT"
+                )
+                else None
+            )
+        )
 
     def create(
         self,
@@ -46,6 +60,7 @@ class ProviderFactory:
                     TerminalProvider(
                         self._workspace,
                         self._terminal_protocol,
+                        self._terminal_capture_endpoint,
                     )
                 )
                 continue

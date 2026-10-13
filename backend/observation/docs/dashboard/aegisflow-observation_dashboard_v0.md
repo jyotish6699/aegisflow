@@ -116,7 +116,6 @@ The final layout is:
 │ LIVE OBSERVATIONS                                              │
 │ Unified real-time observation feed                            │
 ├──────────────────────────────────────────────────────────────┤
-│ TERMINAL LIVE LOG                                              │
 │ Real-time terminal output | automatic scrolling               │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -499,6 +498,10 @@ The underlying exit code remains part of the observation.
 
 Filesystem messages use the actual path/name from the observation.
 
+V0 suppresses provider events for `.git/`, `__pycache__/`, `.pytest_cache/`,
+and `.pyc` files so generated repository noise does not overwhelm the unified
+live observation stream. Meaningful project file changes remain visible.
+
 ## 14.1 Created
 
 ```text
@@ -618,7 +621,7 @@ Its purpose is to show actual terminal output continuously.
 Example:
 
 ```text
-TERMINAL LIVE LOG                         ● Auto-scroll ON
+LIVE OBSERVATIONS                          ● Follow mode
 
 $ pytest tests/observation -v
 
@@ -637,30 +640,23 @@ The dashboard must not generate fake terminal output.
 
 # 18. Automatic Terminal Scrolling
 
-When new terminal output arrives:
-
-1. Add the actual output to the live log buffer.
-2. Update the visible terminal log.
-3. Automatically move the viewport to the newest output.
-4. Keep the latest output visible.
-5. Do not require manual scrolling.
-
-If the log fills the available dashboard height, older output leaves the visible region.
-
-The developer should always see the current bottom of the terminal output.
+When a new observation arrives, append it to the unified live observation
+stream. If the developer is already at the bottom, follow the newest
+observation automatically. If the developer has scrolled upward, preserve
+that manual position until they return to the bottom.
 
 ---
 
-# 19. Bounded Terminal Log
+# 19. Bounded Observation Stream
 
-The terminal log must not grow indefinitely.
+The observation stream must not grow indefinitely.
 
 A bounded in-memory buffer will be used.
 
 Conceptually:
 
 ```text
-new output
+new observation
    ↓
 append
    ↓
@@ -668,14 +664,14 @@ buffer reaches limit
    ↓
 oldest output removed
    ↓
-newest output remains visible
+newest observation remains visible
 ```
 
 The exact buffer size will be selected during implementation based on Textual dashboard behavior and testing.
 
 The principle is locked:
 
-> Keep recent live output; do not allow unbounded terminal-log growth.
+> Keep recent observations; do not allow unbounded observation-stream growth.
 
 ---
 
@@ -789,11 +785,11 @@ DashboardState
 ├── git_status
 ├── terminal_status
 ├── filesystem_status
-├── recent_observations
-└── terminal_log
+└── observations
 ```
 
-The exact Python model/containers will be decided in Step 2.
+The observation stream is bounded and contains terminal output alongside the
+other provider observations. There is no separate terminal-log state model.
 
 The dashboard state must be derived from actual runtime information.
 

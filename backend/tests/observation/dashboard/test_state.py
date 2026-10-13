@@ -13,7 +13,6 @@ from observation.dashboard.state import (
     ObservationEntry,
     ProjectState,
     ProviderStatus,
-    TerminalLogEntry,
     TerminalProviderState,
 )
 
@@ -116,28 +115,6 @@ def test_dashboard_state_contains_observation_buffer() -> None:
     assert state.observations[0].rendered_message == "state.py updated"
 
 
-def test_dashboard_state_contains_terminal_log() -> None:
-    project = ProjectState(
-        name="aegisflow",
-        path=Path("/home/jyotish/dev/aegisflow"),
-    )
-
-    log_entry = TerminalLogEntry(
-        timestamp=datetime.now(),
-        message="pytest tests/observation/dashboard/test_state.py",
-    )
-
-    state = DashboardState(
-        project=project,
-        terminal_log=[log_entry],
-    )
-
-    assert state.terminal_log == [log_entry]
-    assert state.terminal_log[0].message == (
-        "pytest tests/observation/dashboard/test_state.py"
-    )
-
-
 def test_dashboard_state_keeps_latest_observations() -> None:
     project = ProjectState(
         name="aegisflow",
@@ -166,32 +143,6 @@ def test_dashboard_state_keeps_latest_observations() -> None:
     assert state.observations == observations[-3:]
 
 
-def test_dashboard_state_keeps_latest_terminal_log_entries() -> None:
-    project = ProjectState(
-        name="aegisflow",
-        path=Path("/home/jyotish/dev/aegisflow"),
-    )
-
-    state = DashboardState(
-        project=project,
-        max_terminal_log=2,
-    )
-
-    entries = [
-        TerminalLogEntry(
-            timestamp=datetime.now(),
-            message=f"command-{index}",
-        )
-        for index in range(4)
-    ]
-
-    for entry in entries:
-        state.add_terminal_log(entry)
-
-    assert len(state.terminal_log) == 2
-    assert state.terminal_log == entries[-2:]
-
-
 def test_dashboard_state_rejects_invalid_observation_limit() -> None:
     project = ProjectState(
         name="aegisflow",
@@ -206,22 +157,6 @@ def test_dashboard_state_rejects_invalid_observation_limit() -> None:
         assert False
     except ValueError as exc:
         assert str(exc) == "max_observations must be greater than zero"
-
-
-def test_dashboard_state_rejects_invalid_terminal_log_limit() -> None:
-    project = ProjectState(
-        name="aegisflow",
-        path=Path("/home/jyotish/dev/aegisflow"),
-    )
-
-    try:
-        DashboardState(
-            project=project,
-            max_terminal_log=0,
-        )
-        assert False
-    except ValueError as exc:
-        assert str(exc) == "max_terminal_log must be greater than zero"
 
 
 def test_dashboard_state_applies_terminal_observation() -> None:
@@ -253,12 +188,6 @@ def test_dashboard_state_applies_terminal_observation() -> None:
     assert len(state.observations) == 1
     assert (
         state.observations[0].rendered_message
-        == "pytest tests/observation/dashboard executed successfully"
-    )
-
-    assert len(state.terminal_log) == 1
-    assert (
-        state.terminal_log[0].message
         == "pytest tests/observation/dashboard executed successfully"
     )
 
@@ -297,10 +226,40 @@ def test_dashboard_state_renders_failed_terminal_command() -> None:
         == "pytest failed (exit code 1)"
     )
 
-    assert (
-        state.terminal_log[0].message
-        == "pytest failed (exit code 1)"
+def test_dashboard_state_renders_terminal_output_streams() -> None:
+    project = ProjectState(
+        name="aegisflow",
+        path=Path("/home/jyotish/dev/aegisflow"),
     )
+    state = DashboardState(project=project)
+
+    for stream, text in (
+        ("stdout", "hello\n"),
+        ("stderr", "error\n"),
+        ("stdout", "world\n"),
+    ):
+        state.apply_observation(
+            Observation(
+                provider=ProviderType.TERMINAL,
+                observation_type="terminal.output",
+                metadata=ObservationMetadata(
+                    source="terminal",
+                    attributes={
+                        "cwd": "/home/jyotish/dev/aegisflow",
+                        "stream": stream,
+                        "text": text,
+                    },
+                ),
+            )
+        )
+
+    assert [
+        entry.rendered_message for entry in state.observations
+    ] == [
+        "[stdout] hello\n",
+        "[stderr] error\n",
+        "[stdout] world\n",
+    ]
 
 
 def test_dashboard_state_applies_filesystem_observation() -> None:
@@ -601,6 +560,4 @@ def test_dashboard_snapshot_does_not_share_observation_buffer() -> None:
     state.observations.clear()
 
     assert len(snapshot.observations) == 1
-
-
 
