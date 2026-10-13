@@ -28,6 +28,11 @@ class ProviderStarter:
 
         self._health = health
 
+    @property
+    def health(self) -> ProviderHealthTracker:
+        """Return the lifecycle health source used by this starter."""
+        return self._health
+
     # -------------------------------------------------
     # Start Provider
     # -------------------------------------------------

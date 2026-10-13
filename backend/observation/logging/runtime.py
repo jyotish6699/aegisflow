@@ -4,6 +4,11 @@ from pathlib import Path
 
 from observation.core.observation import Observation
 from observation.core.provider import ObservationProvider
+from observation.core.enums import ProviderType
+from observation.lifecycle.health import (
+    ProviderHealth,
+    ProviderHealthTracker,
+)
 from observation.lifecycle.starter import ProviderStarter
 from observation.lifecycle.stopper import ProviderStopper
 
@@ -15,11 +20,17 @@ class ObservationRuntime:
         providers: list[ObservationProvider],
         starter: ProviderStarter,
         stopper: ProviderStopper,
+        health: ProviderHealthTracker | None = None,
     ) -> None:
         self._workspace = workspace.resolve()
         self._providers = providers
         self._starter = starter
         self._stopper = stopper
+        self._health = health or self._lifecycle_health()
+        self._provider_types = {
+            provider.provider_type
+            for provider in providers
+        }
         self._stop_event = asyncio.Event()
         self._started = False
         self._stopped = False
@@ -27,6 +38,22 @@ class ObservationRuntime:
             asyncio.Queue()
         )
         self._observation_tasks: list[asyncio.Task[None]] = []
+        self._status_queue: asyncio.Queue[
+            dict[ProviderType, ProviderHealth]
+        ] = asyncio.Queue()
+
+    def _lifecycle_health(self) -> ProviderHealthTracker:
+        starter_health = getattr(self._starter, "health", None)
+
+        if isinstance(starter_health, ProviderHealthTracker):
+            return starter_health
+
+        stopper_health = getattr(self._stopper, "health", None)
+
+        if isinstance(stopper_health, ProviderHealthTracker):
+            return stopper_health
+
+        return ProviderHealthTracker()
 
     @property
     def workspace(self) -> Path:
@@ -37,6 +64,31 @@ class ObservationRuntime:
     def providers(self) -> list[ObservationProvider]:
         """Return the providers owned by this runtime session."""
         return self._providers
+
+    def provider_health(
+        self,
+    ) -> dict[ProviderType, ProviderHealth]:
+        """Return a copy of the current provider lifecycle state."""
+        states = self._health.snapshot()
+        provider_types = self._provider_types | set(states)
+
+        return {
+            provider_type: states.get(
+                provider_type,
+                ProviderHealth.STOPPED,
+            )
+            for provider_type in provider_types
+        }
+
+    async def lifecycle_events(
+        self,
+    ):
+        """Yield lifecycle snapshots whenever provider state changes."""
+        while not self._stopped:
+            yield await self._status_queue.get()
+
+    async def _publish_lifecycle(self) -> None:
+        await self._status_queue.put(self.provider_health())
 
     async def start(self) -> None:
         started_providers = await self._starter.start_all(
@@ -49,6 +101,8 @@ class ObservationRuntime:
         self._stop_event = asyncio.Event()
 
         self._observation_queue = asyncio.Queue()
+        self._status_queue = asyncio.Queue()
+        await self._publish_lifecycle()
 
         self._observation_tasks = [
             asyncio.create_task(
@@ -67,7 +121,17 @@ class ObservationRuntime:
         except asyncio.CancelledError:
             raise
         except Exception:
-            return
+            self._health.set_state(
+                provider.provider_type,
+                ProviderHealth.FAILED,
+            )
+        else:
+            self._health.set_state(
+                provider.provider_type,
+                ProviderHealth.STOPPED,
+            )
+
+        await self._publish_lifecycle()
 
     async def observe(self) -> AsyncIterator[Observation]:
         if not self._started:
@@ -124,3 +188,4 @@ class ObservationRuntime:
 
         self._providers = stopped_providers
         self._started = False
+        await self._publish_lifecycle()

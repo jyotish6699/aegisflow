@@ -27,7 +27,19 @@ class FilesystemEventHandlerAdapter(FileSystemEventHandler):
         except ValueError:
             return True
 
-        return ".git" in relative_path.parts
+        if ".git" in relative_path.parts:
+            return True
+
+        if any(
+            part in {
+                "__pycache__",
+                ".pytest_cache",
+            }
+            for part in relative_path.parts
+        ):
+            return True
+
+        return path.suffix == ".pyc"
 
     def on_created(self, event: FileSystemEvent) -> None:
         path = Path(event.src_path).resolve()
@@ -124,5 +136,4 @@ class FilesystemWatcher:
             return self._event_queue.get(timeout=timeout)
         except Empty:
             return None
-
 

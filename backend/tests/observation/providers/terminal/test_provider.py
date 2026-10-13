@@ -1,10 +1,10 @@
+import asyncio
 from pathlib import Path
 import json
 
 import pytest
 
 from observation.core.enums import ProviderType
-from observation.core.observation import Observation
 from observation.providers.terminal.provider import TerminalProvider
 
 
@@ -46,14 +46,9 @@ async def test_terminal_provider_does_not_observe_before_start(
 
 
 @pytest.mark.asyncio
-async def test_terminal_provider_does_not_observe_when_protocol_is_missing(
+async def test_terminal_provider_waits_when_protocol_is_missing(
     tmp_path: Path,
 ) -> None:
-    """
-    TerminalProvider should produce no observations when the
-    terminal protocol does not exist.
-    """
-
     protocol = tmp_path / "protocol.jsonl"
 
     provider = TerminalProvider(tmp_path, protocol)
@@ -61,12 +56,20 @@ async def test_terminal_provider_does_not_observe_when_protocol_is_missing(
     await provider.initialize()
     await provider.start()
 
-    observations = [
-        observation
-        async for observation in provider.observe()
-    ]
+    observation_task = asyncio.create_task(
+        provider.observe().__anext__()
+    )
 
-    assert observations == []
+    await asyncio.sleep(0.1)
+
+    assert not observation_task.done()
+
+    await provider.stop()
+
+    observation_task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await observation_task
 
 
 @pytest.mark.asyncio
@@ -116,14 +119,9 @@ async def test_terminal_provider_emits_command_started_observation(
     await provider.initialize()
     await provider.start()
 
-    observations = [
-        observation
-        async for observation in provider.observe()
-    ]
+    observation = await provider.observe().__anext__()
 
-    assert len(observations) == 1
-
-    observation = observations[0]
+    await provider.stop()
 
     assert observation.provider == ProviderType.TERMINAL
     assert observation.observation_type == "command.started"
@@ -163,14 +161,9 @@ async def test_terminal_provider_emits_command_completed_observation(
     await provider.initialize()
     await provider.start()
 
-    observations = [
-        observation
-        async for observation in provider.observe()
-    ]
+    observation = await provider.observe().__anext__()
 
-    assert len(observations) == 1
-
-    observation = observations[0]
+    await provider.stop()
 
     assert observation.provider == ProviderType.TERMINAL
     assert observation.observation_type == "command.completed"
@@ -185,3 +178,49 @@ async def test_terminal_provider_emits_command_completed_observation(
         "exit_code": 0,
         "duration": 0.125,
     }
+
+
+@pytest.mark.asyncio
+async def test_terminal_provider_observes_event_written_after_start(
+    tmp_path: Path,
+) -> None:
+    protocol = tmp_path / "protocol.jsonl"
+
+    provider = TerminalProvider(tmp_path, protocol)
+
+    await provider.initialize()
+    await provider.start()
+
+    observation_task = asyncio.create_task(
+        provider.observe().__anext__()
+    )
+
+    await asyncio.sleep(0.1)
+
+    protocol.write_text(
+        json.dumps(
+            {
+                "type": "command.completed",
+                "command_id": "late-command",
+                "command": "echo hello",
+                "cwd": str(tmp_path),
+                "exit_code": 0,
+                "duration": 0.01,
+            }
+        )
+        + "\n"
+    )
+
+    observation = await asyncio.wait_for(
+        observation_task,
+        timeout=1.0,
+    )
+
+    await provider.stop()
+
+    assert observation.provider == ProviderType.TERMINAL
+    assert observation.observation_type == "command.completed"
+    assert (
+        observation.metadata.attributes["command"]
+        == "echo hello"
+    )

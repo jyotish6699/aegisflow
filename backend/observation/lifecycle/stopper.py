@@ -27,6 +27,11 @@ class ProviderStopper:
 
         self._health = health
 
+    @property
+    def health(self) -> ProviderHealthTracker:
+        """Return the lifecycle health source used by this stopper."""
+        return self._health
+
     # -------------------------------------------------
     # Stop Provider
     # -------------------------------------------------

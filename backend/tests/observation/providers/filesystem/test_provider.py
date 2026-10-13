@@ -37,13 +37,33 @@ class FakeFilesystemWatcher:
         self.stopped = True
 
 
+async def next_observation(
+    provider: FilesystemProvider,
+    timeout: float = 1.0,
+):
+    return await asyncio.wait_for(
+        anext(provider.observe()),
+        timeout=timeout,
+    )
+
+
+async def optional_observation(
+    provider: FilesystemProvider,
+    timeout: float = 0.2,
+):
+    try:
+        return await next_observation(provider, timeout)
+    except (asyncio.TimeoutError, StopAsyncIteration):
+        return None
+
+
 @pytest.mark.asyncio
-async def test_filesystem_provider_deduplicates_consecutive_modified_events(
+async def test_filesystem_provider_emits_consecutive_modified_events(
     tmp_path: Path,
 ) -> None:
     """
-    FilesystemProvider should emit one file.modified observation
-    for consecutive identical modification events for the same path.
+    FilesystemProvider should emit each real modification event,
+    including consecutive events for the same path.
     """
 
     test_file = tmp_path / "test.txt"
@@ -65,13 +85,8 @@ async def test_filesystem_provider_deduplicates_consecutive_modified_events(
     await provider.start()
 
     observations = [
-        observation
-        async for observation in provider.observe()
-    ]
-
-    observations += [
-        observation
-        async for observation in provider.observe()
+        await next_observation(provider),
+        await next_observation(provider),
     ]
 
     await provider.stop()
@@ -82,7 +97,7 @@ async def test_filesystem_provider_deduplicates_consecutive_modified_events(
         if observation.observation_type == "file.modified"
     ]
 
-    assert len(modified_observations) == 1
+    assert len(modified_observations) == 2
 
 
 @pytest.mark.asyncio
@@ -160,16 +175,8 @@ async def test_filesystem_provider_emits_file_created_observation(
     observation = None
 
     for _ in range(100):
-        observations = [
-            item
-            async for item in provider.observe()
-        ]
-
-        if observations:
-            observation = observations[0]
-            break
-
-        await asyncio.sleep(0.01)
+        observation = await next_observation(provider)
+        break
 
     await provider.stop()
 
@@ -207,20 +214,11 @@ async def test_filesystem_provider_emits_file_modified_observation(
     observation = None
 
     for _ in range(100):
-        observations = [
-            item
-            async for item in provider.observe()
-        ]
+        item = await next_observation(provider)
 
-        for item in observations:
-            if item.observation_type == "file.modified":
-                observation = item
-                break
-
-        if observation is not None:
+        if item.observation_type == "file.modified":
+            observation = item
             break
-
-        await asyncio.sleep(0.01)
 
     await provider.stop()
 
@@ -258,20 +256,11 @@ async def test_filesystem_provider_emits_file_deleted_observation(
     observation = None
 
     for _ in range(100):
-        observations = [
-            item
-            async for item in provider.observe()
-        ]
+        item = await next_observation(provider)
 
-        for item in observations:
-            if item.observation_type == "file.deleted":
-                observation = item
-                break
-
-        if observation is not None:
+        if item.observation_type == "file.deleted":
+            observation = item
             break
-
-        await asyncio.sleep(0.01)
 
     await provider.stop()
 
@@ -313,16 +302,8 @@ async def test_filesystem_provider_ignores_file_outside_workspace(
     observation = None
 
     for _ in range(100):
-        observations = [
-            item
-            async for item in provider.observe()
-        ]
-
-        if observations:
-            observation = observations[0]
-            break
-
-        await asyncio.sleep(0.01)
+        observation = await optional_observation(provider)
+        break
 
     await provider.stop()
 
@@ -349,16 +330,8 @@ async def test_filesystem_provider_ignores_directory_activity(
     observation = None
 
     for _ in range(100):
-        observations = [
-            item
-            async for item in provider.observe()
-        ]
-
-        if observations:
-            observation = observations[0]
-            break
-
-        await asyncio.sleep(0.01)
+        observation = await optional_observation(provider)
+        break
 
     await provider.stop()
 
@@ -394,13 +367,8 @@ async def test_filesystem_provider_does_not_deduplicate_different_paths(
     await provider.start()
 
     observations = [
-        observation
-        async for observation in provider.observe()
-    ]
-
-    observations += [
-        observation
-        async for observation in provider.observe()
+        await next_observation(provider),
+        await next_observation(provider),
     ]
 
     await provider.stop()
@@ -458,10 +426,7 @@ async def test_filesystem_provider_resets_deduplication_after_different_event(
     observations = []
 
     for _ in range(3):
-        observations += [
-            observation
-            async for observation in provider.observe()
-        ]
+        observations.append(await next_observation(provider))
 
     await provider.stop()
 
@@ -499,10 +464,7 @@ async def test_filesystem_provider_resets_deduplication_on_initialize(
 
     await provider.start()
 
-    first_observations = [
-        observation
-        async for observation in provider.observe()
-    ]
+    first_observations = [await next_observation(provider)]
 
     await provider.stop()
 
@@ -519,10 +481,7 @@ async def test_filesystem_provider_resets_deduplication_on_initialize(
     provider._watcher = second_watcher
     await provider.start()
 
-    second_observations = [
-        observation
-        async for observation in provider.observe()
-    ]
+    second_observations = [await next_observation(provider)]
 
     await provider.stop()
 

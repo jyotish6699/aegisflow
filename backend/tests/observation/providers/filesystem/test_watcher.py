@@ -213,3 +213,22 @@ def test_filesystem_watcher_ignores_moved_files(
     watcher.stop()
 
     assert events == []
+
+
+def test_filesystem_watcher_ignores_generated_cache_noise(
+    tmp_path: Path,
+) -> None:
+    watcher = FilesystemWatcher(tmp_path)
+    watcher.start()
+
+    cache_file = tmp_path / "__pycache__" / "module.pyc"
+    pytest_cache_file = tmp_path / ".pytest_cache" / "state"
+    cache_file.parent.mkdir()
+    pytest_cache_file.parent.mkdir()
+    cache_file.write_bytes(b"cache")
+    pytest_cache_file.write_text("cache")
+
+    time.sleep(0.1)
+    watcher.stop()
+
+    assert watcher.get_event() is None

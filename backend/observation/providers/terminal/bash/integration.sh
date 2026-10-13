@@ -7,6 +7,7 @@ _aegisflow_started_at=""
 _aegisflow_internal=1
 _aegisflow_last_debug_command=""
 _aegisflow_skip_next_debug=1
+_aegisflow_session_id="${AEGISFLOW_SESSION_ID:-bash-${BASHPID}-${RANDOM}}"
 
 
 _aegisflow_emit_started() {
@@ -26,6 +27,9 @@ _aegisflow_emit_started() {
 
     case "$BASH_COMMAND" in
         trap\ *)
+            return
+            ;;
+        aegisflow_capture\ *|_aegisflow_capture\ *)
             return
             ;;
         _aegisflow_*)
@@ -64,6 +68,40 @@ print(
 PY
 
     _aegisflow_internal=0
+}
+
+
+aegisflow_capture() {
+    local command="$*"
+
+    if [[ -z "${AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT:-}" ]]; then
+        printf '%s\n' \
+            "aegisflow_capture: AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT is not set" \
+            >&2
+        return 2
+    fi
+
+    if [[ -z "$command" ]]; then
+        printf '%s\n' \
+            "aegisflow_capture: expected a command string" \
+            >&2
+        return 2
+    fi
+
+    local shell_executable
+    shell_executable="$(command -v bash)" || return 127
+
+    _aegisflow_internal=1
+    python3 -m observation.providers.terminal.capture.helper \
+        --endpoint "$AEGISFLOW_TERMINAL_CAPTURE_ENDPOINT" \
+        --session-id "$_aegisflow_session_id" \
+        --command-id "${BASHPID}-${RANDOM}" \
+        --shell "$shell_executable" \
+        --cwd "$PWD" \
+        "$command"
+    local exit_code=$?
+    _aegisflow_internal=0
+    return "$exit_code"
 }
 
 

@@ -1,0 +1,430 @@
+from pathlib import Path
+
+from textual.app import App, ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.events import Resize
+from textual.widgets import Footer, Header, RichLog, Static
+
+from observation.dashboard.runtime import DashboardRuntimeBridge
+from observation.dashboard.composition import create_observation_runtime
+from observation.dashboard.state import (
+    DashboardState,
+    DashboardStatus,
+    FilesystemProviderState,
+    GitProviderState,
+    ProjectState,
+    ProviderStatus,
+    TerminalProviderState,
+)
+
+
+class DashboardApp(App):
+    TITLE = "AegisFlow Observation Dashboard"
+
+    CSS = """
+    Screen {
+        layout: vertical;
+    }
+
+    #project-header {
+        height: 6;
+        border: round $accent;
+        padding: 0 2;
+    }
+
+    #project-title-row {
+        height: 1;
+        width: 100%;
+        align: left middle;
+    }
+
+    #project-name {
+        width: 1fr;
+        text-style: bold;
+        height: 1;
+    }
+
+    #overall-status {
+        width: auto;
+        height: 1;
+        text-style: bold;
+        padding: 0 1;
+    }
+
+    #project-info {
+        height: auto;
+        margin-top: 1;
+    }
+
+    #provider-status {
+        height: 8;
+        border: round $accent;
+        padding: 0 2;
+    }
+
+    #provider-cards {
+        height: auto;
+        min-height: 4;
+    }
+
+    .provider-card {
+        height: auto;
+        width: 1fr;
+        min-height: 4;
+        border: round $panel;
+        padding: 1 2;
+    }
+
+    #observation-area {
+        height: 2fr;
+        min-height: 10;
+    }
+
+    #observations {
+        height: 1fr;
+        border: round $accent;
+        padding: 0 1;
+    }
+
+    .section-title {
+        text-style: bold;
+        margin-bottom: 1;
+    }
+
+    Screen.compact #provider-cards {
+        layout: vertical;
+    }
+
+    Screen.compact .provider-card {
+        width: 100%;
+        min-height: 3;
+        padding: 0 1;
+    }
+
+    Screen.compact #provider-status {
+        min-height: 11;
+    }
+
+    Screen.compact #observation-area {
+        height: 1fr;
+    }
+
+    Screen.compact #observations {
+        height: 1fr;
+    }
+
+    Screen.compact.narrow #project-header {
+        padding: 1;
+    }
+
+    Screen.compact.narrow #provider-status {
+        padding: 1;
+    }
+
+    Screen.compact.narrow #project-info {
+        margin-top: 0;
+    }
+
+    Screen.compact.narrow .provider-card {
+        min-height: 3;
+    }
+    """
+
+    def __init__(
+        self,
+        state: DashboardState,
+        bridge: DashboardRuntimeBridge | None = None,
+    ) -> None:
+        super().__init__()
+
+        self._state = state
+        self._bridge = bridge
+        self._refresh_timer = None
+
+        self._rendered_observation_ids: set[int] = set()
+        self._observation_placeholder_visible = True
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+
+        with Vertical(id="project-header"):
+            with Horizontal(id="project-title-row"):
+                yield Static(
+                    self._state.project.name.upper(),
+                    id="project-name",
+                )
+                yield Static(
+                    self._overall_status_text(),
+                    id="overall-status",
+                )
+
+            yield Static(
+                self._project_text(),
+                id="project-info",
+            )
+
+        with Vertical(id="provider-status"):
+            yield Static(
+                "PROVIDER STATUS",
+                classes="section-title",
+            )
+
+            with Horizontal(id="provider-cards"):
+                yield Static(
+                    self._git_text(),
+                    id="git-provider",
+                    classes="provider-card",
+                )
+
+                yield Static(
+                    self._terminal_text(),
+                    id="terminal-provider",
+                    classes="provider-card",
+                )
+
+                yield Static(
+                    self._filesystem_text(),
+                    id="filesystem-provider",
+                    classes="provider-card",
+                )
+
+        with Vertical(id="observation-area"):
+            yield Static(
+                "LIVE OBSERVATIONS",
+                classes="section-title",
+            )
+
+            yield RichLog(
+                id="observations",
+                wrap=False,
+                auto_scroll=True,
+            )
+
+        yield Footer()
+
+    async def on_mount(self) -> None:
+        self._update_responsive_layout()
+
+        self._sync_observations()
+
+        if self._bridge is None:
+            return
+
+        await self._bridge.start()
+
+        self._refresh_timer = self.set_interval(
+            0.1,
+            self.refresh_state,
+        )
+
+    def on_resize(self, event: Resize) -> None:
+        self._update_responsive_layout()
+
+    async def on_unmount(self) -> None:
+        if self._refresh_timer is not None:
+            self._refresh_timer.pause()
+            self._refresh_timer = None
+
+        if self._bridge is not None:
+            await self._bridge.stop()
+
+    def _update_responsive_layout(self) -> None:
+        width = self.size.width
+
+        if width < 90:
+            self.screen.add_class("compact")
+        else:
+            self.screen.remove_class("compact")
+
+        if width < 60:
+            self.screen.add_class("narrow")
+        else:
+            self.screen.remove_class("narrow")
+
+    def refresh_state(self) -> None:
+        self.query_one("#project-info", Static).update(
+            self._project_text()
+        )
+
+        self.query_one("#overall-status", Static).update(
+            self._overall_status_text()
+        )
+
+        self.query_one("#git-provider", Static).update(
+            self._git_text()
+        )
+
+        self.query_one("#terminal-provider", Static).update(
+            self._terminal_text()
+        )
+
+        self.query_one("#filesystem-provider", Static).update(
+            self._filesystem_text()
+        )
+
+        self._sync_observations()
+
+    def _sync_observations(self) -> None:
+        log = self.query_one("#observations", RichLog)
+        follow_live = log.is_vertical_scroll_end
+        previous_scroll_y = log.scroll_y
+
+        current_ids = {
+            id(observation)
+            for observation in self._state.observations
+        }
+
+        removed_ids = (
+            self._rendered_observation_ids - current_ids
+        )
+        if removed_ids:
+            log.clear()
+            self._rendered_observation_ids.clear()
+            self._observation_placeholder_visible = False
+
+        if self._state.observations:
+            if self._observation_placeholder_visible:
+                log.clear()
+                self._observation_placeholder_visible = False
+
+            for observation in self._state.observations:
+                observation_id = id(observation)
+
+                if observation_id in self._rendered_observation_ids:
+                    continue
+
+                log.write(
+                    self._format_observation(observation)
+                )
+                self._rendered_observation_ids.add(
+                    observation_id
+                )
+
+            if follow_live:
+                log.scroll_end(animate=False)
+            elif removed_ids:
+                log.scroll_y = previous_scroll_y
+
+            return
+
+        if not self._observation_placeholder_visible:
+            log.clear()
+            self._observation_placeholder_visible = True
+
+        if not log.lines:
+            log.write("Waiting for observations...")
+
+    def _project_text(self) -> str:
+        project = self._state.project
+
+        repository = project.repository or "--"
+        branch = self._state.git.branch or "--"
+        status = self._state.overall_status.value.upper()
+
+        return (
+            f"Project    {project.name}\n"
+            f"Path       {project.path}\n"
+            f"Repository {repository}\n"
+            f"Branch     {branch}\n"
+            f"Status     {status}"
+        )
+
+    def _format_observation(self, observation) -> str:
+        rendered_message = observation.rendered_message
+
+        timestamp = getattr(
+            observation,
+            "timestamp",
+            None,
+        )
+
+        provider = getattr(
+            observation,
+            "provider",
+            None,
+        )
+
+        if timestamp is None or provider is None:
+            return rendered_message
+
+        return (
+            f"{timestamp.strftime('%H:%M:%S')}  "
+            f"{provider.upper():<11} "
+            f"{rendered_message}"
+        )
+
+    def _overall_status_text(self) -> str:
+        return f"● {self._state.overall_status.value.upper()}"
+
+    def _git_text(self) -> str:
+        return (
+            "Git Provider\n"
+            f"● {self._status_text(self._state.git.status)}\n"
+            f"Repository: {self._state.git.repository or '--'}\n"
+            f"Branch: {self._state.git.branch or '--'}"
+        )
+
+    def _terminal_text(self) -> str:
+        terminal = self._state.terminal
+
+        cwd = str(terminal.cwd) if terminal.cwd else "--"
+        shell = terminal.shell or "--"
+        session = "YES" if terminal.active_session else "NO"
+
+        return (
+            "Terminal Provider\n"
+            f"● {self._status_text(terminal.status)}\n"
+            f"Shell: {shell}\n"
+            f"CWD: {cwd}\n"
+            f"Active session: {session}"
+        )
+
+    def _filesystem_text(self) -> str:
+        filesystem = self._state.filesystem
+
+        workspace = (
+            str(filesystem.workspace)
+            if filesystem.workspace
+            else "--"
+        )
+
+        event = filesystem.event_type or "--"
+
+        return (
+            "Filesystem Provider\n"
+            f"● {self._status_text(filesystem.status)}\n"
+            f"Workspace: {workspace}\n"
+            f"Event: {event}"
+        )
+
+    @staticmethod
+    def _status_text(status: ProviderStatus) -> str:
+        return status.value.upper()
+
+
+if __name__ == "__main__":
+    workspace = Path.cwd().resolve()
+    terminal_protocol = Path("/tmp/aegisflow-terminal.jsonl")
+
+    runtime = create_observation_runtime(
+        workspace=workspace,
+        terminal_protocol=terminal_protocol,
+    )
+
+    state = DashboardState(
+        project=ProjectState(
+            name=workspace.name,
+            path=workspace,
+        ),
+        overall_status=DashboardStatus.IDLE,
+    )
+
+    bridge = DashboardRuntimeBridge(
+        runtime=runtime,
+        state=state,
+    )
+
+    DashboardApp(
+        state=state,
+        bridge=bridge,
+    ).run()
